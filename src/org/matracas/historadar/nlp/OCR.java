@@ -25,15 +25,38 @@ package org.matracas.historadar.nlp;
 import java.util.Map;
 import org.matracas.historadar.Document;
 
+/**
+ * OCR analyzer and corrector.
+ */
 public class OCR
 {
+    protected Document.Collection collection;
+    
     public OCR(Document.Collection collection)
     {
+        this.collection = collection;
+        // TODO: linguistic analysis of the collection to help identify and correct the OCR errors
     }
     
-    public String getCorrectedText(String text)
+    /**
+     * Correct the OCR errors found in the given document.
+     *
+     * @param document the one to be corrected
+     * @return count of corrections done
+     */
+    public int correctDocument(Document document)
     {
-        return text;
+        int correctionCount;
+        String text, correctedText;
+        text = document.getPlainText();
+        
+        // TODO: correct text according to findings from the linguistic analisis of the document collection
+        correctedText = text;
+        correctionCount = 0;
+        
+        document.setPlainText(correctedText);
+        
+        return correctionCount;
     }
     
 }

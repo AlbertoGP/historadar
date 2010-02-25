@@ -35,6 +35,10 @@ import org.matracas.historadar.Document;
  */
 public class Metadata
 {
+    private static final String DC_NAMESPACE = "http://purl.org/dc/elements/1.1/";
+    public static final String TITLE = DC_NAMESPACE + "title";
+    public static final String DATE  = DC_NAMESPACE + "date";
+    
     public Metadata(Document.Collection collection)
     {
     }
@@ -45,27 +49,35 @@ public class Metadata
         String plainText = document.getPlainText();
         
         // TODO: extract metadata entries form plain text
-        // e.g. entries.dcDate("1949-03-18");
+        // e.g. entries.date("1949-03-18");
+        entries.title("NO TITLE FOUND YET");
+        entries.date("XXXX-XX-XX");
         
         return entries;
     }
     
     public class Entries extends Hashtable<String, String>
     {
-        private static final String DC_NAMESPACE = "http://purl.org/dc/elements/1.1/";
-        
         public Entries title(String title)
         {
-            put(DC_NAMESPACE + "title", title);
+            put(TITLE, title);
             
             return this;
+        }
+        public String title()
+        {
+            return get(TITLE);
         }
         
         public Entries date(String date)
         {
-            put(DC_NAMESPACE + "date", date);
+            put(DATE, date);
             
             return this;
+        }
+        public String date()
+        {
+            return get(DATE);
         }
     };
     

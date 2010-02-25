@@ -25,7 +25,6 @@
  * Natural Language Processing package.
  *
  * @author <a href="http://matracas.org/">Alberto González Palomo</a>
- * @version 0.1a, 2010-02-25
  *
  */
 package org.matracas.historadar.nlp;

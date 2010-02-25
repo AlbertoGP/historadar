@@ -31,6 +31,8 @@ import java.awt.event.ActionEvent;
 import java.io.File;
 
 import org.matracas.historadar.Document;
+import org.matracas.historadar.nlp.OCR;
+import org.matracas.historadar.nlp.Metadata;
 
 /**
  * Main class of HistoRadar, with the GUI application.
@@ -40,6 +42,7 @@ public class View implements ActionListener
     private JFrame window;
     private JTextPane documentView;
     private HeatMap heatMap;
+    private JPanel metadataPane;
     
     public View()
     {
@@ -68,7 +71,25 @@ public class View implements ActionListener
                 System.setProperty("historadar.defaultCollection", directory.getAbsolutePath());
                 Document.Collection documents = new Document.Collection(directory);
                 Document document = documents.getDocumentIterator().next();
+                
+                // OCR correction
+                OCR ocr = new OCR(documents);
+                int corrections = ocr.correctDocument(document);
+                System.err.println("Corrected " + corrections + " errors from the OCR text");
                 documentView.setText(document.getPlainText());
+                
+                // Metadata extraction
+                Metadata metadata = new Metadata(documents);
+                Metadata.Entries entries = metadata.getMetadata(document);
+                String value;
+                metadataPane.removeAll();
+                value = entries.title();
+                System.err.println("title=" + value);
+                if (value != null) metadataPane.add(new JLabel("Title: " + value));
+                value = entries.date();
+                System.err.println("date=" + value);
+                if (value != null) metadataPane.add(new JLabel("Date: " + value));
+                window.validate();
             }
             else {
                 System.err.println("Collection loading cancelled");
@@ -90,17 +111,15 @@ public class View implements ActionListener
         heatMap.addActionListener(this);
         heatMap.setActionCommand("heat-map-click");
         
-        JPanel metadata = new JPanel();
+        metadataPane = new JPanel();
         JPanel documentPane;
         JScrollPane heatMapPane;
         documentPane = new JPanel();
         heatMapPane = new JScrollPane(heatMap);
         
         documentPane.setLayout(new BoxLayout(documentPane, BoxLayout.PAGE_AXIS));
-        metadata.setLayout(new BoxLayout(metadata, BoxLayout.PAGE_AXIS));
-        metadata.add(new JLabel("Title:"));
-        metadata.add(new JLabel("Date:"));
-        documentPane.add(metadata);
+        metadataPane.setLayout(new BoxLayout(metadataPane, BoxLayout.PAGE_AXIS));
+        documentPane.add(metadataPane);
         documentPane.add(new JScrollPane(documentView));
         
         JSplitPane view = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, documentPane, heatMapPane);
