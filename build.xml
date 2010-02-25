@@ -1,11 +1,12 @@
 <project name="historadar" default="dist" basedir=".">
   <description>
-    Turning Point Historical Event Explorer
+    Historical Event Radar
   </description>
   <!-- set global properties for this build -->
   <property name="src"   location="src"/>
   <property name="build" location="build"/>
   <property name="dist"  location="dist"/>
+  <property name="docs"  location="docs"/>
   
   <target name="init">
     <!-- Create the time stamp -->
@@ -29,10 +30,20 @@
     <jar jarfile="${dist}/lib/historadar-${DSTAMP}.jar" basedir="${build}" manifest="Manifest.txt"/>
   </target>
   
+  <target name="docs"
+          description="generate the documentation" >
+    <mkdir dir="${docs}"/>
+    <!-- Extract the documentation from ${src} into ${docs} -->
+    <javadoc sourcepath="${src}" overview="${src}/overview.html" windowtitle="History Radar" author="true" version="true" destdir="${docs}" use="org.matracas.historadar">
+      <link href="http://java.sun.com/javase/6/docs/api/"/>
+    </javadoc>
+  </target>
+  
   <target name="clean"
           description="clean up" >
     <!-- Delete the ${build} and ${dist} directory trees -->
     <delete dir="${build}"/>
     <delete dir="${dist}"/>
+    <delete dir="${docs}"/>
   </target>
 </project>

@@ -3,9 +3,9 @@
 //   Copyright 2010 Alberto González Palomo
 //   Author: Alberto González Palomo - http://matracas.org/
 //
-//   This file is part of Java Feedback Toolkit, abbreviated as JFT.
+//   This file is part of HistoRadar, the History Radar.
 //
-//   JFT is free software; you can redistribute it and/or modify
+//   HistoRadar is free software; you can redistribute it and/or modify
 //   it under the terms of the GNU General Public License as published by
 //   the Free Software Foundation; either version 3 of the License, or
 //   (at your option) any later version.

@@ -20,20 +20,12 @@
 //
 /////////////////////////////////////////////////////////////////////////////
 
-package org.matracas.historadar.nlp;
 
-import java.util.Map;
-import org.matracas.historadar.Document;
-
-public class OCR
-{
-    public OCR(Document.Collection collection)
-    {
-    }
-    
-    public String getCorrectedText(String text)
-    {
-        return text;
-    }
-    
-}
+/**
+ * Main package. The main class is {@link org.matracas.historadar.View}
+ *
+ * @author <a href="http://matracas.org/">Alberto González Palomo</a>
+ * @version 0.1a, 2010-02-25
+ *
+ */
+package org.matracas.historadar;
