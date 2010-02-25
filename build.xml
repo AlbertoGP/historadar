@@ -28,6 +28,7 @@
     
     <!-- Put everything in ${build} into the JFT-${DSTAMP}.jar file -->
     <jar jarfile="${dist}/lib/historadar-${DSTAMP}.jar" basedir="${build}" manifest="Manifest.txt"/>
+    <copy file="${dist}/lib/historadar-${DSTAMP}.jar" tofile="${dist}/lib/historadar.jar"/>
   </target>
   
   <target name="docs"
