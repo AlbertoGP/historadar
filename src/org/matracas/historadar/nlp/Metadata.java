@@ -29,7 +29,9 @@ import org.matracas.historadar.Document;
 /**
  * Metadata extracted from a document.
  *
- * The metadata entries have the meanings defined by the Dublin Core® Metadata Initiative, described in {@link http://dublincore.org/documents/dces/}
+ * The metadata entries have the meanings defined by the
+ * Dublin Core® Metadata Initiative, described in
+ * <a href="http://dublincore.org/documents/dces/">http://dublincore.org/documents/dces/</a>
  */
 public class Metadata
 {
