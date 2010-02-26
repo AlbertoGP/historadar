@@ -24,6 +24,7 @@ package org.matracas.historadar.nlp;
 
 import java.util.Map;
 import java.util.Hashtable;
+import java.util.Vector;
 import org.matracas.historadar.Document;
 
 /**
@@ -36,13 +37,48 @@ import org.matracas.historadar.Document;
 public class Metadata
 {
     private static final String DC_NAMESPACE = "http://purl.org/dc/elements/1.1/";
-    public static final String TITLE = DC_NAMESPACE + "title";
-    public static final String DATE  = DC_NAMESPACE + "date";
+    public static final String contributor = DC_NAMESPACE + "contributor";
+    public static final String coverage    = DC_NAMESPACE + "coverage";
+    public static final String creator     = DC_NAMESPACE + "creator";
+    public static final String date        = DC_NAMESPACE + "date";
+    public static final String description = DC_NAMESPACE + "description";
+    public static final String format      = DC_NAMESPACE + "format";
+    public static final String identifier  = DC_NAMESPACE + "identifier";
+    public static final String language    = DC_NAMESPACE + "language";
+    public static final String publisher   = DC_NAMESPACE + "publisher";
+    public static final String relation    = DC_NAMESPACE + "relation";
+    public static final String rights      = DC_NAMESPACE + "rights";
+    public static final String source      = DC_NAMESPACE + "source";
+    public static final String subject     = DC_NAMESPACE + "subject";
+    public static final String title       = DC_NAMESPACE + "title";
+    public static final String type        = DC_NAMESPACE + "type";
     
     public Metadata(Document.Collection collection)
     {
+        // TODO: linguistic analysis of the collection, if necessary
     }
     
+    /**
+     * Get the metadata entries from the given document,
+     * based on the linguistic analysis of the collection.
+     *
+     * For example, to print all the "date" entries:
+     * <pre>
+     * Metadata metadata = new Metadata(documents);
+     * Metadata.Entries entries = metadata.getMetadata(document);
+     * Metadata.Values values;
+     * values = entries.get(Metadata.date);
+     * if (values != null) {
+     *     Iterator valueIterator = values.iterator();
+     *     while (valueIterator.hasNext()) {
+     *         System.err.println("Date: " + valueIterator.next());
+     *     }
+     * }
+     * </pre>
+     *
+     * @param document from which to extract the metadata
+     * @return entries indexed by type
+     */
     public Entries getMetadata(Document document)
     {
         Entries entries = new Entries();
@@ -50,35 +86,41 @@ public class Metadata
         
         // TODO: extract metadata entries form plain text
         // e.g. entries.date("1949-03-18");
-        entries.title("NO TITLE FOUND YET");
-        entries.date("XXXX-XX-XX");
+        entries.add(title, "NO TITLE FOUND YET");
+        entries.add(date, "XXXX-XX-01");
+        entries.add(date, "XXXX-XX-02");
+        entries.add(date, "XXXX-XX-03");
         
         return entries;
     }
     
-    public class Entries extends Hashtable<String, String>
+    public class Values extends Vector<String>
     {
-        public Entries title(String title)
-        {
-            put(TITLE, title);
-            
-            return this;
-        }
-        public String title()
-        {
-            return get(TITLE);
-        }
-        
-        public Entries date(String date)
-        {
-            put(DATE, date);
-            
-            return this;
-        }
-        public String date()
-        {
-            return get(DATE);
-        }
     };
     
+    /**
+     * Collection of string entities indexed by class.
+     */
+    public class Entries extends Hashtable<String, Values>
+    {
+        /**
+         * Add an entity of the given class to the collection.
+         *
+         * @param entryClass class for the entity
+         * @param value the entity as a string
+         * @return the collection so that we can chain calls to this function
+         *         like entries.add("class1","value1").add("class2","value2)...
+         */
+        public Entries add(String entryClass, String value)
+        {
+            Values values = get(entryClass);
+            if (null == values) {
+                put(entryClass, values = new Values());
+            }
+            values.add(value);
+            
+            return this;
+        }
+        
+    }
 }
