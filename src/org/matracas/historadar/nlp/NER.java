@@ -42,7 +42,7 @@ public class NER
     
     /**
      * Get the entities from a given document,
-     * based on the linguistic of the document collection.
+     * based on the linguistic analysis of the document collection.
      *
      * @param document the document where we look for entities
      */
