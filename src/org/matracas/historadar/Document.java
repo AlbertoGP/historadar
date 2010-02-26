@@ -39,7 +39,7 @@ public class Document
     /**
      * Constructs a new document from a file.
      *
-     * At the moment only plain text files are supported.
+     * At the moment only plain text files encoded as UTF-8 are supported.
      */
     public Document(File file)
         throws java.io.FileNotFoundException, java.io.IOException
