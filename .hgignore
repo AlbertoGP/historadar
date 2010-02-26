@@ -1,4 +1,4 @@
 syntax: regexp
-^build[/\\]
-^dist[/\\]
-^docs[/\\]
+^build[\\/]
+^dist[\\/]
+^docs[\\/]

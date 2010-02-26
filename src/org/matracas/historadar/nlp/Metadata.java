@@ -32,7 +32,6 @@ import org.matracas.historadar.Document;
  * The metadata entries have the meanings defined by the
  * Dublin Core® Metadata Initiative, described in
  * <a href="http://dublincore.org/documents/dces/">http://dublincore.org/documents/dces/</a>
- * The document format is UTF-8.
  */
 public class Metadata
 {
