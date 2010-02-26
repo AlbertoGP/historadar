@@ -27,9 +27,14 @@ import javax.swing.JButton;
 import java.awt.*;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
+import javax.swing.event.MouseInputListener;
+import java.awt.event.MouseWheelListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelEvent;
 import java.util.Vector;
 
 public class HeatMap extends JPanel
+    implements MouseInputListener, MouseWheelListener
 {
     Vector<ActionListener> actionListeners;
     String actionCommand;
@@ -39,6 +44,9 @@ public class HeatMap extends JPanel
         actionListeners = new Vector<ActionListener>();
         actionCommand = "heatmap";
         setMinimumSize(new Dimension(200,200));
+        this.addMouseListener(this);
+        this.addMouseMotionListener(this);
+        this.addMouseWheelListener(this);
     }
     
     public void paint(Graphics g)
@@ -57,4 +65,28 @@ public class HeatMap extends JPanel
     {
         actionCommand = command;
     }
+    
+    // MouseInputListener = MouseListener + MouseMotionLister
+    public void mouseClicked(MouseEvent e)
+    {
+        System.err.println("clicked heat map at " + e.getX() + ", " + e.getY());
+    }
+    
+    // MouseListener
+    public void mouseEntered(MouseEvent e) {}
+    
+    public void mouseExited(MouseEvent e) {}
+    
+    public void mousePressed(MouseEvent e) {}
+    
+    public void mouseReleased(MouseEvent e) {}
+    
+    // MouseMotionListener
+    public void mouseDragged(MouseEvent e) {}
+    
+    public void mouseMoved(MouseEvent e) {}
+    
+    // MouseWheelListener
+    public void mouseWheelMoved(MouseWheelEvent e) {}
+    
 }
