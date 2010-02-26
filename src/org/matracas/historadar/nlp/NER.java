@@ -89,9 +89,9 @@ public class NER
                 put(type, entities = new Entities());
             }
             entities.add(entity);
-                
+            
             return this;
         }
-            
+        
     }
 }
