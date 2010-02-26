@@ -48,7 +48,7 @@ public class Document
         BufferedReader reader = new BufferedReader(new FileReader(file));
         String line;
         while ((line = reader.readLine()) != null) {
-            plainText += line + "\n";
+            plainText += new String(line.getBytes(), "UTF-8") + "\n";
         }
         reader.close();
     }
