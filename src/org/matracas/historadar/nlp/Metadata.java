@@ -63,7 +63,7 @@ public class Metadata
      * based on the linguistic analysis of the collection.
      *
      * For example, to print all the "date" entries:
-     * <code>
+     * <pre>
      * Metadata metadata = new Metadata(documents);
      * Metadata.Entries entries = metadata.getMetadata(document);
      * Metadata.Values values;
@@ -74,7 +74,7 @@ public class Metadata
      *         System.err.println("Date: " + valueIterator.next());
      *     }
      * }
-     * </code>
+     * </pre>
      *
      * @param document from which to extract the metadata
      * @return entries indexed by type
