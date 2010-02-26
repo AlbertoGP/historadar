@@ -29,6 +29,7 @@ import java.awt.Color;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.io.File;
+import java.util.Iterator;
 
 import org.matracas.historadar.Document;
 import org.matracas.historadar.nlp.OCR;
@@ -81,14 +82,22 @@ public class View implements ActionListener
                 // Metadata extraction
                 Metadata metadata = new Metadata(documents);
                 Metadata.Entries entries = metadata.getMetadata(document);
-                String value;
+                Metadata.Values values;
                 metadataPane.removeAll();
-                value = entries.title();
-                System.err.println("title=" + value);
-                if (value != null) metadataPane.add(new JLabel("Title: " + value));
-                value = entries.date();
-                System.err.println("date=" + value);
-                if (value != null) metadataPane.add(new JLabel("Date: " + value));
+                values = entries.get(Metadata.title);
+                if (values != null) {
+                    Iterator valueIterator = values.iterator();
+                    while (valueIterator.hasNext()) {
+                        metadataPane.add(new JLabel("Title: " + valueIterator.next()));
+                    }
+                }
+                values = entries.get(Metadata.date);
+                if (values != null) {
+                    Iterator valueIterator = values.iterator();
+                    while (valueIterator.hasNext()) {
+                        metadataPane.add(new JLabel("Date: " + valueIterator.next()));
+                    }
+                }
                 window.validate();
             }
             else {

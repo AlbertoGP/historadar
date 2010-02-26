@@ -34,6 +34,9 @@ import org.matracas.historadar.Document;
 public class NER
 {
     private static final String NAMESPACE = "http://matracas.org/ns/historadar/";
+    public static final String location     = NAMESPACE + "location";
+    public static final String person       = NAMESPACE + "person";
+    public static final String organization = NAMESPACE + "organization";
     
     public NER(Document.Collection collection)
     {
@@ -46,93 +49,49 @@ public class NER
      *
      * @param document the document where we look for entities
      */
-    public Entities getEntities(Document document)
+    public EntityTypes getEntities(Document document)
     {
-        Entities entities = new Entities();
+        EntityTypes entities = new EntityTypes();
         String plainText = document.getPlainText();
         
         // TODO: extract entities form plain text
         // These are some dumb examples until this is implemented:
-        entities.location("not here nor there");
-        entities.person("Big Kahuna");
-        entities.person("His Excellence Mister Foolserrand");
-        entities.person("Totem Master");
-        entities.organization("Council of Notable People");
+        entities.add(person, "not here nor there");
+        entities.add(person, "Big Kahuna");
+        entities.add(person, "His Excellence Mister Foolserrand");
+        entities.add(person, "Totem Master");
+        entities.add(organization, "Council of Notable People");
         
         return entities;
     }
     
-    /**
-     * An entity extracted from a document, built from a string.
-     */
-    public static class Entity
+    public class Entities extends Vector<String>
     {
-        protected String string;
-        
-        public Entity(String string)
-        {
-            this.string = string;
-        }
-        
-        /**
-         * Type of entity.
-         */
-        public enum Type
-        {
-            LOCATION, PERSON, ORGANIZATION;
-        }
-    }
-    
-    /**
-     * Table of entities indexed by type.
-     */
-    public class Entities extends Hashtable<Entity.Type, Vector<Entity> >
-    {
-        public Entities location(String location)
-        {
-            Vector<Entity> entitiesOfType = get(Entity.Type.LOCATION);
-            if (null == entitiesOfType) {
-                put(Entity.Type.LOCATION, entitiesOfType = new Vector<Entity>());
-            }
-            entitiesOfType.add(new Entity(location));
-            
-            return this;
-        }
-        public Vector<Entity> location()
-        {
-            return get(Entity.Type.LOCATION);
-        }
-        
-        public Entities person(String person)
-        {
-            Vector<Entity> entitiesOfType = get(Entity.Type.PERSON);
-            if (null == entitiesOfType) {
-                put(Entity.Type.PERSON, entitiesOfType = new Vector<Entity>());
-            }
-            entitiesOfType.add(new Entity(person));
-            
-            return this;
-        }
-        public Vector<Entity> person()
-        {
-            return get(Entity.Type.PERSON);
-        }
-        
-        public Entities organization(String organization)
-        {
-            Vector<Entity> entitiesOfType = get(Entity.Type.ORGANIZATION);
-            if (null == entitiesOfType) {
-                put(Entity.Type.ORGANIZATION, entitiesOfType = new Vector<Entity>());
-            }
-            entitiesOfType.add(new Entity(organization));
-            
-            return this;
-        }
-        public Vector<Entity> organization()
-        {
-            return get(Entity.Type.ORGANIZATION);
-        }
-        
     };
     
+    /**
+     * Collection of string entities indexed by type.
+     */
+    public class EntityTypes extends Hashtable<String, Entities>
+    {
+        /**
+         * Add an entity of the given class to the collection.
+         *
+         * @param type the type of the entity
+         * @param entity the entity as a string
+         * @return the collection so that we can chain calls to this function
+         *         like collection.add("class1","entity1").add("class2","entity2)...
+         */
+        public EntityTypes add(String type, String entity)
+        {
+            Entities entities = get(type);
+            if (null == entities) {
+                put(type, entities = new Entities());
+            }
+            entities.add(entity);
+                
+            return this;
+        }
+            
+    }
 }
