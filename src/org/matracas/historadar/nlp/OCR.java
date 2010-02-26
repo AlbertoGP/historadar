@@ -42,7 +42,7 @@ public class OCR
      * Correct the OCR errors found in the given document.
      *
      * @param document the one to be corrected
-     * @return count of corrections done
+     * @return Count of corrections done
      */
     public int correctDocument(Document document)
     {
