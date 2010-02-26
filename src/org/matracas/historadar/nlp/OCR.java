@@ -35,7 +35,7 @@ public class OCR
     public OCR(Document.Collection collection)
     {
         this.collection = collection;
-        // TODO: linguistic analysis of the collection to help identify and correct the OCR errors
+        // TODO: as test linguistic analysis of the collection to help identify and correct the OCR errors
     }
     
     /**
