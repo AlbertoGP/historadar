@@ -23,6 +23,9 @@
 package org.matracas.historadar.nlp;
 
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.matracas.historadar.Document;
 
 /**
@@ -50,11 +53,20 @@ public class OCR
         String text, correctedText;
         text = document.getPlainText();
         
-        // TODO: correct text according to findings from the linguistic analisis of the document collection
+        // TODO: correct text according to findings from the linguistic analysis of the document collection
+        
+        // get rid of one or more spaces between single digits to get proper year representations (1 9 1 8 --> 1918)
+        //Pattern pattern = Pattern.compile("([1-9]).([1-9]).([1-9]).([1-9])");
+        Pattern pattern = Pattern.compile("W");
+        Matcher matcher = pattern.matcher(text);
+        //matcher.replaceAll("$1$2$3$4xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+        matcher.replaceAll("I");
+ 
         correctedText = text;
         correctionCount = 0;
         
         document.setPlainText(correctedText);
+        document.setPlainText(text);
         
         return correctionCount;
     }
