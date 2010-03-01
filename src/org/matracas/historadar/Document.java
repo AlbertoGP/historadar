@@ -36,6 +36,10 @@ public class Document
 {
     private String plainText;
     
+    protected Document()
+    {
+    }
+    
     /**
      * Constructs a new document from a file.
      *
@@ -95,17 +99,23 @@ public class Document
             String identifier;
             File[] files = directory.listFiles();
             for (int i = 0; i < files.length; ++i) {
-                if (files[i].getName().endsWith(".txt")) try {
-                        identifier = files[i].getName();
+                document = null;
+                try {
+                    if (files[i].getName().endsWith(".txt")) { 
                         document = new Document(files[i]);
-                        documents.put(identifier, document);
                     }
-                    catch (java.io.FileNotFoundException e) {
-                        System.err.println("File not found: " + files[i].getName());
-                    }
-                    catch (java.io.IOException e) {
-                        System.err.println("IO error: " + e);
-                    }
+                }
+                catch (java.io.FileNotFoundException e) {
+                    System.err.println("File not found: " + files[i].getName());
+                }
+                catch (java.io.IOException e) {
+                    System.err.println("IO error: " + e);
+                }
+                
+                if (document != null) {
+                    identifier = files[i].getName();
+                    documents.put(identifier, document);
+                }
             }
         }
         
