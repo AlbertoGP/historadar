@@ -27,6 +27,9 @@ import java.util.Hashtable;
 import java.util.Vector;
 import org.matracas.historadar.Document;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
  * Metadata extracted from a document.
  *
@@ -84,12 +87,16 @@ public class Metadata
         Entries entries = new Entries();
         String plainText = document.getPlainText();
         
-        // TODO: extract metadata entries form plain text
+        // TODO: extract metadata entries from plain text
         // e.g. entries.date("1949-03-18");
         entries.add(title, "NO TITLE FOUND YET");
-        entries.add(date, "XXXX-XX-01");
-        entries.add(date, "XXXX-XX-02");
-        entries.add(date, "XXXX-XX-03");
+        
+        Pattern pattern = Pattern.compile("held.+ on (...........)");
+        Matcher matcher = pattern.matcher(plainText);
+        if (matcher.find()){
+	        entries.add(date, matcher.group(0));
+	        entries.add(date, matcher.group(1));
+        }
         
         return entries;
     }

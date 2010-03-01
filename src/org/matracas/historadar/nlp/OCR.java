@@ -58,7 +58,7 @@ public class OCR
         /* Get proper years:
          * get rid of one or more spaces between single digits to get proper year representations (1 9 1 8 --> 1918)
          */
-        Pattern pattern = Pattern.compile("([1-9]).([1-9]).([1-9]).([1-9])");
+        Pattern pattern = Pattern.compile("([1-9])[^0-9]?([0-9])[^0-9]?([0-9])[^0-9]?([0-9])");
         Matcher matcher = pattern.matcher(text);
         correctedText = matcher.replaceAll("$1$2$3$4");
         correctionCount = 0;
