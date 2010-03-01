@@ -91,10 +91,9 @@ public class Metadata
         // e.g. entries.date("1949-03-18");
         entries.add(title, "NO TITLE FOUND YET");
         
-        Pattern pattern = Pattern.compile("held.+on ((monday|tuesday|wednesday|thursday|friday|saturday|sunday).+?)present", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE | Pattern.CANON_EQ);
+        Pattern pattern = Pattern.compile("held.+?on.?((monday|tuesday|wednesday|thursday|friday|saturday|sunday).+?)present", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE | Pattern.CANON_EQ); //Thanks to http://www.regular-expressions.info/java.html
         Matcher matcher = pattern.matcher(plainText);
         if (matcher.find()){
-	        entries.add(date, matcher.group(0));
 	        entries.add(date, matcher.group(1));
         }
         
