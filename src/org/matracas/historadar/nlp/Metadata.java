@@ -22,6 +22,8 @@
 
 package org.matracas.historadar.nlp;
 
+import java.sql.Time;
+import java.text.DateFormat;
 import java.util.Map;
 import java.util.Hashtable;
 import java.util.Vector;
@@ -82,22 +84,113 @@ public class Metadata
      * @param document from which to extract the metadata
      * @return entries indexed by type
      */
-    public Entries getMetadata(Document document)
+    public Entries getMetadata(Document document) throws Exception
     {
         Entries entries = new Entries();
         String plainText = document.getPlainText();
-        
-        // TODO: extract metadata entries from plain text
-        // e.g. entries.date("1949-03-18");
-        entries.add(title, "NO TITLE FOUND YET");
-        
-        Pattern pattern = Pattern.compile("held.+?on.?((monday|tuesday|wednesday|thursday|friday|saturday|sunday).+?)present", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE | Pattern.CANON_EQ); //Thanks to http://www.regular-expressions.info/java.html
-        Matcher matcher = pattern.matcher(plainText);
-        if (matcher.find()){
-	        entries.add(date, matcher.group(1));
-        }
-        
-        return entries;
+                
+        String monthString = "";
+        String dayString = "";
+        String yearString = "";
+        String hourString = ""; 
+		String minuteString = "";
+		String dayTimeString = ""; // "a" OR "p" (a.m. or p.m.)
+		
+		Integer month;
+		Integer day;
+		Integer year;
+		Integer hour;   // > 12 if dayTimeString.contains("p")
+		Integer minute; 
+		
+		try {
+	        entries.add(title, "NO TITLE FOUND YET");
+	        
+	        Pattern pattern = Pattern.compile("held.+?on.?((monday|tuesday|wednesday|thursday|friday|saturday|sunday).+?)present", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE | Pattern.CANON_EQ); //Thanks to http://www.regular-expressions.info/java.html
+	        Matcher matcher = pattern.matcher(plainText);
+	        if (matcher.find()){
+		        String plainDate = matcher.group(1);
+	        	// entries.add(date, plainDate);
+		        
+		        // Friday, October 11, 1918, at 4 p.m.
+		        pattern = pattern.compile("\\S+\\s+(\\S+)\\s+(\\d+)\\D+(\\d+)\\D+(.+)", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE | Pattern.CANON_EQ);
+		        matcher = pattern.matcher(plainDate);
+		        
+		        if(matcher.find()){
+			        monthString = matcher.group(1);
+			        dayString = matcher.group(2);
+			        yearString = matcher.group(3);
+			        String timeString = matcher.group(4);
+			        
+			        // Split up times like "3-15 p.m.":
+		        	pattern = pattern.compile("(.*)(p|a).*", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE | Pattern.CANON_EQ);
+		        	matcher = pattern.matcher(timeString);
+		        	if(matcher.find()){
+				        String hourMinutePart = matcher.group(1);
+		        		dayTimeString = matcher.group(2).toLowerCase(); // must be "a" or "p" for calculating the integered hour time later
+				        pattern = pattern.compile("(\\d{1,2})\\D*?(\\d*)", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE | Pattern.CANON_EQ);
+				        matcher = pattern.matcher(hourMinutePart);
+				        if(matcher.find()){
+				        	hourString = matcher.group(1);
+				        	if (matcher.groupCount() > 1 && !matcher.group(2).equals("")){
+				        		minuteString = matcher.group(2);
+				        	}else{
+				        		minuteString = "00";
+				        	}
+				        }
+		        	}
+			        entries.add(date, dayString + " " + monthString + " " + yearString + " at " + hourString + ":" + minuteString + " " + dayTimeString + ".m.");
+			        
+			        
+			        /* Conversion of time values to Integers */
+			        
+			        if (monthString.equalsIgnoreCase("january")) {
+						month = 1;
+					} else if (monthString.equalsIgnoreCase("february")) {
+						month = 2;
+					} else if (monthString.equalsIgnoreCase("march")) {
+						month = 3;
+					} else if (monthString.equalsIgnoreCase("april")) {
+						month = 4;
+					} else if (monthString.equalsIgnoreCase("may")) {
+						month = 5;
+					} else if (monthString.equalsIgnoreCase("june")) {
+						month = 6;
+					} else if (monthString.equalsIgnoreCase("july")) {
+						month = 7;
+					} else if (monthString.equalsIgnoreCase("august")) {
+						month = 8;
+					} else if (monthString.equalsIgnoreCase("september")) {
+						month = 9;
+					} else if (monthString.equalsIgnoreCase("october")) {
+						month = 10;
+					} else if (monthString.equalsIgnoreCase("november")) {
+						month = 11;
+					} else if (monthString.equalsIgnoreCase("december")) {
+						month = 12;
+					} else {
+						month = 0;
+					}
+			        
+			        day = Integer.parseInt(dayString);
+			        year = Integer.parseInt(yearString);
+			        hour = Integer.parseInt(hourString);
+			        minute = Integer.parseInt(minuteString);
+			        
+			        if (dayTimeString.equalsIgnoreCase("p")) {
+						hour += 12;
+					}
+			        
+			        /* Adding time as split meta data */
+			        entries.add(date, year.toString() + "-" + String.format("%02d", month) + "-" + String.format("%02d", day) + " " + hour.toString() + ":" + String.format("%02d", minute));
+		        }
+	        }
+		}
+	    catch(Exception e){
+	    	entries.add(date, e.getLocalizedMessage());
+	    }
+	    finally{
+	    	return entries;
+	    }
     }
     
     public class Values extends Vector<String>
