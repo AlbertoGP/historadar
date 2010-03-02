@@ -84,7 +84,7 @@ public class Metadata
      * @param document from which to extract the metadata
      * @return entries indexed by type
      */
-    public Entries getMetadata(Document document) throws Exception
+    public Entries getMetadata(Document document)
     {
         Entries entries = new Entries();
         String plainText = document.getPlainText();
