@@ -27,7 +27,10 @@ import java.io.FileReader;
 import java.io.BufferedReader;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Vector;
 import java.util.Iterator;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 /**
  * Source text document.
@@ -36,7 +39,12 @@ public class Document
 {
     private String plainText;
     
-    protected Document()
+    /**
+     * Constructs an empty document.
+     *
+     * The content can be set later with {@link #setPlainText(String)}
+     */
+    public Document()
     {
     }
     
@@ -68,6 +76,16 @@ public class Document
     }
     
     /**
+     * Get the plain text version of the document as a string.
+     *
+     * @return string plain text content as a string
+     */
+    public String getPlainText(Segment segment)
+    {
+        return plainText.substring(segment.begin, segment.end);
+    }
+    
+    /**
      * Set the content of the document from a plain text version.
      *
      * @param text plain text content as a string
@@ -75,6 +93,190 @@ public class Document
     public void setPlainText(String text)
     {
         plainText = text;
+    }
+    
+    /**
+     * Attributed document segment. This can be a word, a paragraph, etc.
+     * <br/>
+     * The segment's attributes can be handled using the {@link Map} interface,
+     * for instance {@link Map#put(Object, Object)} and {@link Map#get(Object)}
+     */
+    public static class Segment extends HashMap<String, String>
+        implements java.lang.Comparable<Segment>
+    {
+        protected int begin, end;
+        
+        public Segment(int begin, int end) {
+            this.begin = begin;
+            this.end   = end;
+        }
+        
+        public int getBegin() { return begin; }
+        public int getEnd()   { return end;   }
+        
+        public int compareTo(Segment other)
+        {
+            if      (begin < other.begin) return -1;
+            else if (begin > other.begin) return  1;
+            else if (end   > other.end  ) return -1;
+            else if (end   < other.end  ) return  1;
+            else return 0;
+        }
+    }
+    
+    public class SegmentIterator
+    {
+        Matcher matcher;
+        int start, end;
+        
+        public SegmentIterator(Pattern pattern)
+        {
+            matcher = pattern.matcher(plainText);
+            findNext();
+        }
+        
+        public boolean hasNext()
+        {
+            return start != -1;
+        }
+        
+        public Segment next()
+        {
+            Segment next = new Segment(start, end);
+            findNext();
+            
+            return next;
+        }
+        
+        protected void findNext()
+        {
+            if (matcher.find()) {
+                start = matcher.start();
+                end   = matcher.end();
+            }
+            else {
+                start = -1;
+                end   = -1;
+            }
+        }
+    }
+    
+    public SegmentIterator iterator(Pattern pattern)
+    {
+        return new SegmentIterator(pattern);
+    }
+    
+    /**
+     * A list of document segments.
+     */
+    public static class SegmentList extends Vector<Segment>
+    {
+    }
+    
+    /**
+     * Segment the document with the given named patterns.
+     *
+     * @param patterns the patterns that define the segments.
+     *        It is a map from name strings to patterns.
+     *        The segments produced by each pattern have the property
+     *        "pattern-name" set to the corresponding name string.
+     * @return segments that match the pattern, ordered by
+     *         enclosing segment first
+     *
+     *
+     * <hr/>
+     * <b>Example: a toy sentence splitter and Part-Of-Speech/Named-Entity tagger</b>
+     * <pre>
+     * import java.util.Map;
+     * import java.util.HashMap;
+     * import java.util.regex.Pattern;
+     * import java.util.Vector;
+     * import java.util.Iterator;
+     * import org.matracas.historadar.Document;
+     * 
+     * public class POS
+     * {
+     *     public static void main(String args[])
+     *     {
+     *         Document document = new Document();
+     *         document.setPlainText("The rain in Spain falls mainly on the plain. The cats in France smoke fragance.");
+     *         Map<String, Pattern> patterns = new HashMap<String, Pattern>();
+     *         int I = Pattern.UNICODE_CASE | Pattern.CASE_INSENSITIVE;
+     *         patterns.put("sentence",    Pattern.compile("[^.:!?]+[.:!?]"));
+     *         patterns.put("country",     Pattern.compile("\\b(Spain|France)\\b"));
+     *         patterns.put("verb",        Pattern.compile("\\b(falls?|smokes?)\\b"));
+     *         patterns.put("preposition", Pattern.compile("\\b(in|on|at)\\b"));
+     *         patterns.put("article",     Pattern.compile("\\b(the|an|a)\\b", I));
+     *         patterns.put("animal",      Pattern.compile("\\b(dogs?|cats?)\\b"));
+     *         patterns.put("noun",        Pattern.compile("\\b(dogs?|cats?|Spain|France|plain|fragance|rain)\\b"));
+     *         Vector<Document.Segment> segments = document.segment(patterns);
+     *         Iterator<Document.Segment> i = segments.iterator();
+     *         while (i.hasNext()) {
+     *             Document.Segment segment = i.next();
+     *             System.err.println("Segment [" + segment.getBegin() + ", " + segment.getEnd() + "] "
+     *                                + segment.get("pattern-name") + ": "
+     *                                + document.getPlainText(segment));
+     *         }
+     *     }
+     * }
+     * </pre>
+     *
+     * This produces the following output:
+     * <pre>
+     * Segment [0, 44] sentence: The rain in Spain falls mainly on the plain.
+     * Segment [0, 3] article: The
+     * Segment [4, 8] noun: rain
+     * Segment [9, 11] preposition: in
+     * Segment [12, 17] noun: Spain
+     * Segment [12, 17] country: Spain
+     * Segment [18, 23] verb: falls
+     * Segment [31, 33] preposition: on
+     * Segment [34, 37] article: the
+     * Segment [38, 43] noun: plain
+     * Segment [44, 79] sentence:  The cats in France smoke fragance.
+     * Segment [45, 48] article: The
+     * Segment [49, 53] noun: cats
+     * Segment [49, 53] animal: cats
+     * Segment [54, 56] preposition: in
+     * Segment [57, 63] noun: France
+     * Segment [57, 63] country: France
+     * Segment [64, 69] verb: smoke
+     * Segment [70, 78] noun: fragance
+     * </pre>
+     */
+    public SegmentList segment(Map<String, Pattern> patterns)
+    {
+        SegmentList segments = new SegmentList();
+        
+        for (Map.Entry<String, Pattern> entry : patterns.entrySet()) {
+            SegmentIterator i = new SegmentIterator(entry.getValue());
+            while (i.hasNext()) {
+                Segment segment = i.next();
+                segment.put("pattern-name", entry.getKey());
+                segments.add(segment);
+            }
+        }
+        
+        java.util.Collections.sort(segments);
+        
+        return segments;
+    }
+    
+    /**
+     * Encode the document as an XML string with the segments tagged.
+     *
+     * <p><b>TODO: not implemented yet</b></p>
+     * The root element is "document",
+     * each segment is encoded as an element called "segment"
+     * with its properties as XML attributes.
+     * Overlapping segments are split so that the result is a tree.
+     *
+     * @param segments the segments that will be marked as XML elements
+     * @return serialized XML document
+     */
+    public String getXmlString(SegmentList segments)
+    {
+        return "<document>" + plainText + "</document>";
     }
     
     /**
