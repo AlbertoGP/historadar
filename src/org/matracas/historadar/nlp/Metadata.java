@@ -195,7 +195,7 @@ public class Metadata
     
     public class Values extends Vector<String>
     {
-    };
+    }
     
     /**
      * Collection of string entities indexed by class.
