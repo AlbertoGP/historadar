@@ -174,6 +174,40 @@ public class Document
     }
     
     /**
+     * A table of patterns.
+     */
+    public static class PatternTable extends HashMap<String, Pattern>
+    {
+        public static final int CASE_INSENSITIVE = Pattern.UNICODE_CASE | Pattern.CASE_INSENSITIVE;
+        
+        public void put(String name, String pattern)
+        {
+            put(name, pattern, false);
+        }
+        
+        public void put(String name, String pattern, boolean caseInsensitive)
+        {
+            if (caseInsensitive) {
+                put(name, Pattern.compile(pattern, CASE_INSENSITIVE));
+            }
+            else {
+                put(name, Pattern.compile(pattern));
+            }
+        }
+        
+        public void putWords(String name, Vector<String> words)
+        {
+            String pattern = "\\b(";
+            for (String word : words) {
+                pattern += "|" + word;
+            }
+            pattern += ")\\b";
+            
+            put(name, pattern);
+        }
+    }
+    
+    /**
      * Segment the document with the given named patterns.
      *
      * @param patterns the patterns that define the segments.
@@ -200,17 +234,16 @@ public class Document
      *     {
      *         Document document = new Document();
      *         document.setPlainText("The rain in Spain falls mainly on the plain. The cats in France smoke fragance.");
-     *         Map<String, Pattern> patterns = new HashMap<String, Pattern>();
-     *         int I = Pattern.UNICODE_CASE | Pattern.CASE_INSENSITIVE;
+     *         Document.PatternTable patterns = new Document.PatternTable();
      *         patterns.put("sentence",    Pattern.compile("[^.:!?]+[.:!?]"));
      *         patterns.put("country",     Pattern.compile("\\b(Spain|France)\\b"));
      *         patterns.put("verb",        Pattern.compile("\\b(falls?|smokes?)\\b"));
      *         patterns.put("preposition", Pattern.compile("\\b(in|on|at)\\b"));
-     *         patterns.put("article",     Pattern.compile("\\b(the|an|a)\\b", I));
+     *         patterns.put("article",     Pattern.compile("\\b(the|an|a)\\b", Document.PatternTable.CASE_INSENSITIVE));
      *         patterns.put("animal",      Pattern.compile("\\b(dogs?|cats?)\\b"));
      *         patterns.put("noun",        Pattern.compile("\\b(dogs?|cats?|Spain|France|plain|fragance|rain)\\b"));
-     *         Vector<Document.Segment> segments = document.segment(patterns);
-     *         Iterator<Document.Segment> i = segments.iterator();
+     *         Document.SegmentList segments = document.segment(patterns);
+     *         Iterator&lt;Document.Segment&gt; i = segments.iterator();
      *         while (i.hasNext()) {
      *             Document.Segment segment = i.next();
      *             System.err.println("Segment [" + segment.getBegin() + ", " + segment.getEnd() + "] "
