@@ -20,42 +20,39 @@
 //
 /////////////////////////////////////////////////////////////////////////////
 
-package org.matracas.historadar.nlp;
+package org.matracas.historadar.nlp.ner;
 
 import java.util.Map;
 import java.util.Hashtable;
 import java.util.Vector;
 import org.matracas.historadar.Document;
+import org.matracas.historadar.nlp.NER;
 
 /**
  * Named entities extracted from a document.
  *
  */
-public class NER
+public class SimpleRegexp extends NER
 {
-    protected static final String NAMESPACE = "http://matracas.org/ns/historadar/";
-    public static final String location     = NAMESPACE + "location";
-    public static final String person       = NAMESPACE + "person";
-    public static final String organization = NAMESPACE + "organization";
-    
-    protected EntityTypes entities;
     protected Document.PatternTable patterns;
-    protected NER()
-    {
-    }
     
-    public NER(Document.Collection collection)
+    public SimpleRegexp(Document.Collection collection)
     {
         // TODO: linguistic analysis through the collection
-        entities = new EntityTypes();
-        
-        // Add some entities:
         // These are some dumb examples until this is implemented:
-        //entities.add(person, "not here nor there");
-        //entities.add(person, "Big Kahuna");
-        //entities.add(person, "His Excellence Mister Foolserrand");
-        //entities.add(person, "Totem Master");
-        //entities.add(organization, "Council of Notable People");
+        entities.add(person, "not here nor there");
+        entities.add(person, "Big Kahuna");
+        entities.add(person, "His Excellence Mister Foolserrand");
+        entities.add(person, "Totem Master");
+        entities.add(organization, "Council of Notable People");
+        
+        // Now build the patterns to match them:
+        patterns = new Document.PatternTable();
+        for (Map.Entry<String, Entities> type : entities.entrySet()) {
+            for (String entity : type.getValue()) {
+                patterns.put(type.getKey(), entity);
+            }
+        }
     }
     
     /**
@@ -74,32 +71,4 @@ public class NER
         return segments;
     }
     
-    public class Entities extends Vector<String>
-    {
-    };
-    
-    /**
-     * Collection of string entities indexed by type.
-     */
-    public class EntityTypes extends Hashtable<String, Entities>
-    {
-        /**
-         * Add an entity of the given class to the collection.
-         *
-         * @param type the type of the entity
-         * @param entity the entity as a string
-         * @return the collection so that we can chain calls to this function
-         *         like collection.add("class1","entity1").add("class2","entity2)...
-         */
-        public EntityTypes add(String type, String entity)
-        {
-            Entities entities = get(type);
-            if (null == entities) {
-                put(type, entities = new Entities());
-            }
-            entities.add(entity);
-            
-            return this;
-        }
-    }
 }
