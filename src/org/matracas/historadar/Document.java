@@ -167,6 +167,13 @@ public class Document
     }
     
     /**
+     * A list of document segments.
+     */
+    public static class SegmentList extends Vector<Segment>
+    {
+    }
+    
+    /**
      * Segment the document with the given named patterns.
      *
      * @param patterns the patterns that define the segments.
@@ -237,9 +244,9 @@ public class Document
      * Segment [70, 78] noun: fragance
      * </pre>
      */
-    public Vector<Segment> segment(Map<String, Pattern> patterns)
+    public SegmentList segment(Map<String, Pattern> patterns)
     {
-        Vector<Segment> segments = new Vector<Segment>();
+        SegmentList segments = new SegmentList();
         
         for (Map.Entry<String, Pattern> entry : patterns.entrySet()) {
             SegmentIterator i = new SegmentIterator(entry.getValue());
@@ -267,7 +274,7 @@ public class Document
      * @param segments the segments that will be marked as XML elements
      * @return serialized XML document
      */
-    public String getXmlString(Vector<Segment> segments)
+    public String getXmlString(SegmentList segments)
     {
         return "<document>" + plainText + "</document>";
     }
