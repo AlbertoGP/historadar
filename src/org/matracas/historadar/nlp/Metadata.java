@@ -121,8 +121,8 @@ public class Metadata
 			        yearString = matcher.group(3);
 			        String timeString = matcher.group(4);
 			        
-			        // Split up times like "3-15 p.m.":
-		        	pattern = pattern.compile("(.*)(p|a).*", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE | Pattern.CANON_EQ);
+			        // Split up times like "3-15 p.m.": "1130 a.m.", "4 p.m.", "12 noon"
+		        	pattern = pattern.compile("(.*)(a|p|n).*", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE | Pattern.CANON_EQ);
 		        	matcher = pattern.matcher(timeString);
 		        	if(matcher.find()){
 				        String hourMinutePart = matcher.group(1);
@@ -138,7 +138,7 @@ public class Metadata
 				        	}
 				        }
 		        	}
-			        entries.add(date, dayString + " " + monthString + " " + yearString + " at " + hourString + ":" + minuteString + " " + dayTimeString + ".m.");
+			        // entries.add(date, dayString + " " + monthString + " " + yearString + " at " + hourString + ":" + minuteString + " " + dayTimeString + ".m.");
 			        
 			        
 			        /* Conversion of time values to Integers */
