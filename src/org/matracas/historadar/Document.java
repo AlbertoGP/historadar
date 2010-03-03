@@ -178,7 +178,7 @@ public class Document
      *
      *
      * <hr/>
-     * <b>Example: a toy Part Of Speech tagger</b>
+     * <b>Example: a toy sentence splitter and Part-Of-Speech/Named-Entity tagger</b>
      * <pre>
      * import java.util.Map;
      * import java.util.HashMap;
