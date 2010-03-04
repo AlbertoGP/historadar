@@ -1,1 +1,1 @@
-@java -jar dist/lib/historadar.jar
+@java -jar dist/lib/historadar.jar %*
