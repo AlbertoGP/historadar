@@ -47,12 +47,13 @@ public class SimpleRegexp extends NER
 //        entities.add(location, "Greece");
 //
 //        // Now build the patterns to match them:
-//        patterns = new Document.PatternTable();
+//        
 //        for (Map.Entry<String, Entities> type : entities.entrySet()) {
 //            for (String entity : type.getValue()) {
 //                patterns.put(type.getKey(), entity);
 //            }
 //        }
+                 patterns = new Document.PatternTable();
                  patterns.put("country",   
                  "\\b(Spain|France|Germany|USA|Greece|Italy|Russia|Portugal|Switzerland|Austria|Belgium|Netherlands|Denmark|Sweden|Morocco" +
                  "|Romania|the Balkans|Turkey|England|Bulgaria)\\b"
