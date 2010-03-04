@@ -53,15 +53,16 @@ public class SimpleRegexp extends NER
 //                patterns.put(type.getKey(), entity);
 //            }
 //        }
+
                  patterns = new Document.PatternTable();
-                 patterns.put("country",   
+                 patterns.put("country",
                  "\\b(Spain|France|Germany|USA|Greece|Italy|Russia|Portugal|Switzerland|Austria|Belgium|Netherlands|Denmark|Sweden|Morocco" +
                  "|Romania|the Balkans|Turkey|England|Bulgaria)\\b"
                  );
-         patterns.put("person",    "\\b(the Prime Minister|Lord Curzon|Vice-Admiral|Commander-in-Chief|Under-Secratary of State for Foreign Affairs" +
+                 patterns.put("person",    "\\b(the Prime Minister|Lord Curzon|Vice-Admiral|Commander-in-Chief|Under-Secratary of State for Foreign Affairs" +
                  "|the Sherif|Chief of the Imperial General Staff|Sir William Robertson|General Sarrail|Mr. Chamberlain|Lord Harding|Sir G. Buchanan|McMahon)\\b"
                  );
-         patterns.put("city",    
+                 patterns.put("city",
                  "\\b(Rome|Paris|Larissa|Medina|Salonica|Petrograd|Mecca|Athens)\\b"
                  );
     }
@@ -72,15 +73,15 @@ public class SimpleRegexp extends NER
      *
      * @param document the document where we look for entities
      */
-    public Document.SegmentList getEntities(Document document)
-    {
-        Document.SegmentList segments = new Document.SegmentList();
-        String plainText = document.getPlainText();
-        
-        // TODO: extract entities form plain text
-        segments = document.segment(patterns);
-        
-        return segments;
-    }
+//    public Document.SegmentList getEntities(Document document)
+//    {
+//        Document.SegmentList segments = new Document.SegmentList();
+//        String plainText = document.getPlainText();
+//
+//        // TODO: extract entities form plain text
+//        segments = document.segment(patterns);
+//
+//        return segments;
+//    }
     
 }

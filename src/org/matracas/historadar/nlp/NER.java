@@ -27,6 +27,16 @@ import java.util.Hashtable;
 import java.util.Vector;
 import org.matracas.historadar.Document;
 
+import org.matracas.historadar.Document.Segment;
+import opennlp.tools.namefind.*;
+import opennlp.tools.sentdetect.*;
+import opennlp.tools.tokenize.TokenizerME;
+import opennlp.maxent.GISModel;
+import opennlp.maxent.io.BinaryGISModelReader;
+import opennlp.tools.util.Span;
+import java.io.*;
+
+
 /**
  * Named entities extracted from a document.
  *
@@ -70,6 +80,65 @@ public class NER
         String plainText = document.getPlainText();
         
         // TODO: extract entities form plain text
+        GISModel m;
+        File personFile = new File("c:\\cygwin\\textmining\\hg\\meineLib\\person.bin.gz");
+        File sentenceFile = new File("c:\\cygwin\\textmining\\hg\\meineLib\\EnglishSD.bin.gz");
+        File tokenFile = new File("c:\\cygwin\\textmining\\hg\\meineLib\\EnglishTok.bin.gz");
+        try {
+            BinaryGISModelReader reader = new BinaryGISModelReader(personFile);
+            m = reader.getModel();
+            NameFinderME finder = new NameFinderME(m);
+
+            reader = new BinaryGISModelReader(sentenceFile);
+            m = reader.getModel();
+            SentenceDetectorME detector = new SentenceDetectorME(m);
+            
+            reader = new BinaryGISModelReader(tokenFile);
+            m = reader.getModel();
+            TokenizerME tokenizer = new TokenizerME(m);
+            
+            String[] sentences = detector.sentDetect(plainText);
+            
+            int position = 0;
+          
+            for (String sent:sentences) {
+                String[] tokens = tokenizer.tokenize(sent);
+                Span[] spans = finder.find(tokens);
+
+                for (Span s:spans) {
+                 
+//                    for (int i=s.getStart();i<s.getEnd();i++) {
+//                        System.out.print(tokens[i]);
+//                    }
+//                    System.out.print(" " + position + " " + s.getStart() + " " + s.getEnd());
+//                    System.out.println("");
+                    
+                    int start = position;
+                    int end = position;
+                    for(int i=0;i<s.getStart()-1;i++) {
+                        start = start + tokens[i].length()+1;
+                    }
+                    for(int i=0;i<s.getEnd();i++) {
+                        end = end + tokens[i].length()+1;
+                    }
+                    Segment segment = new Segment(start,end);
+                    segment.put("pattern-name", "person");
+                    segments.add(segment);
+                }
+                position = position + sent.length();
+            }
+            
+
+            
+//            System.out.println("Nr of segments found: "+segments.size());
+
+
+        } catch (Exception e) {
+            System.err.println("exception got thrown in NER.getEntities: "+ e);
+            return segments;
+        }
+
+        
         
         return segments;
     }
