@@ -45,7 +45,9 @@ public class View implements ActionListener
     private HeatMap heatMap;
     private JPanel metadataPane;
     
-    public View()
+    protected Document.Collection documents;
+    
+    public View(String[] args)
     {
         JFrame.setDefaultLookAndFeelDecorated(false);
         window = new JFrame("HistoRadar View");
@@ -53,6 +55,21 @@ public class View implements ActionListener
         window.setSize(800,600);
         buildGUI(window);
         window.setVisible(true);
+        if (args.length == 1) {
+            loadCollection(new File(args[0]));
+            if (documents != null) showDocument();
+        }
+        else {
+            documents = null;
+        }
+    }
+    
+    protected boolean loadCollection(File directory)
+    {
+        System.err.println("1");
+        documents = new Document.Collection(directory);
+        
+        return true;
     }
     
     public void actionPerformed(ActionEvent e)
@@ -62,52 +79,72 @@ public class View implements ActionListener
             System.exit(0);
         }
         else if ("load-collection".equals(command)) {
-            String lastCollectionLoaded = System.getProperty("historadar.defaultCollection");
-            if (null == lastCollectionLoaded) lastCollectionLoaded = ".";
-            JFileChooser fileChooser = new JFileChooser(lastCollectionLoaded);
-            fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-            int returnValue = fileChooser.showOpenDialog(window);
-            if (JFileChooser.APPROVE_OPTION == returnValue) {
-                File directory = fileChooser.getSelectedFile();
-                System.setProperty("historadar.defaultCollection", directory.getAbsolutePath());
-                Document.Collection documents = new Document.Collection(directory);
-                Document document = documents.getDocumentIterator().next();
-                
-                // OCR correction
-                OCR ocr = new OCR(documents);
-                int corrections = ocr.correctDocument(document);
-                System.err.println("Corrected " + corrections + " errors from the OCR text");
-                documentView.setText(document.getPlainText());
-                
-                // Metadata extraction
-                Metadata metadata = new Metadata(documents);
-                Metadata.Entries entries = metadata.getMetadata(document);
-                Metadata.Values values;
-                metadataPane.removeAll();
-                values = entries.get(Metadata.title);
-                if (values != null) {
-                    Iterator valueIterator = values.iterator();
-                    while (valueIterator.hasNext()) {
-                        metadataPane.add(new JLabel("Title: " + valueIterator.next()));
-                    }
+            if (null == documents) {
+                String lastCollectionLoaded = System.getProperty("historadar.defaultCollection");
+                if (null == lastCollectionLoaded) lastCollectionLoaded = ".";
+                JFileChooser fileChooser = new JFileChooser(lastCollectionLoaded);
+                fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+                int returnValue = fileChooser.showOpenDialog(window);
+                if (JFileChooser.APPROVE_OPTION == returnValue) {
+                    File directory = fileChooser.getSelectedFile();
+                        System.setProperty("historadar.defaultCollection", directory.getAbsolutePath());
+                    loadCollection(directory);
                 }
-                values = entries.get(Metadata.date);
-                if (values != null) {
-                    Iterator valueIterator = values.iterator();
-                    while (valueIterator.hasNext()) {
-                        metadataPane.add(new JLabel("Date: " + valueIterator.next()));
-                    }
+                else {
+                    System.err.println("Collection loading cancelled");
                 }
-                window.validate();
             }
-            else {
-                System.err.println("Collection loading cancelled");
-            }
+            
+            if (documents != null) showDocument();
         }
         else {
             System.err.println("Error: Unexpected command: '" + command + "'");
             System.exit(1);
         }
+    }
+    
+    protected void showDocument()
+    {
+        Document document = documents.getDocumentIterator().next();
+        // OCR correction
+        System.err.println("Correcting OCR...");
+        OCR ocr = new OCR(documents);
+        int corrections = ocr.correctDocument(document);
+        System.err.println("Corrected " + corrections + " errors from the OCR text");
+        
+        // Metadata extraction
+        System.err.println("Extracting metadata...");
+        Metadata metadata = new Metadata(documents);
+        Metadata.Entries entries = metadata.getMetadata(document);
+        Metadata.Values values;
+        metadataPane.removeAll();
+        values = entries.get(Metadata.title);
+        if (values != null) {
+            Iterator valueIterator = values.iterator();
+            while (valueIterator.hasNext()) {
+                metadataPane.add(new JLabel("Title: " + valueIterator.next()));
+            }
+        }
+        values = entries.get(Metadata.date);
+        if (values != null) {
+            Iterator valueIterator = values.iterator();
+            while (valueIterator.hasNext()) {
+                metadataPane.add(new JLabel("Date: " + valueIterator.next()));
+            }
+        }
+        
+        System.err.println("Tagging text...");
+        Document.PatternTable patterns = new Document.PatternTable();
+        patterns.put("sentence", "[^.:!?]+[.:!?]");
+        patterns.put("rank", "\\b(Lieutenant|Captain)\\b");
+        patterns.put("ref", "\\b(Reference)\\b");
+        Document.SegmentList segments = document.segment(patterns);
+        
+        String content = document.getXMLString(segments);
+        documentView.setText(content);
+        System.err.println("Text set");
+        
+        window.validate();
     }
     
     private void buildGUI(JFrame frame)
@@ -151,12 +188,12 @@ public class View implements ActionListener
         frame.setJMenuBar(menuBar);
     }
     
-    public static void main(String[] args)
+    public static void main(final String[] args)
     {
         javax.swing.SwingUtilities.invokeLater(new Runnable() {
                 public void run() 
                 {
-                    View view = new View();
+                    View view = new View(args);
                 }
             });
     }
