@@ -32,12 +32,18 @@ import java.util.Iterator;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
+import org.w3c.dom.DOMImplementation;
+import org.w3c.dom.ls.DOMImplementationLS;
+import org.w3c.dom.Element;
+import org.w3c.dom.Text;
+
 /**
  * Source text document.
  */
 public class Document
 {
     private String plainText;
+    org.w3c.dom.bootstrap.DOMImplementationRegistry registry;
     
     /**
      * Constructs an empty document.
@@ -46,6 +52,19 @@ public class Document
      */
     public Document()
     {
+        registry = null;
+        try {
+            registry = org.w3c.dom.bootstrap.DOMImplementationRegistry.newInstance();
+        }
+        catch (java.lang.ClassNotFoundException e) {
+            System.err.println("Error: no XML DOM implementation available:\n" + e);
+        }
+        catch (java.lang.InstantiationException e) {
+            System.err.println("Error: XML DOM instantiation exception:\n" + e);
+        }
+        catch (java.lang.IllegalAccessException e) {
+            System.err.println("Error: XML DOM illegal access exception:\n" + e);
+        }
     }
     
     /**
@@ -54,15 +73,29 @@ public class Document
      * At the moment only plain text files encoded as UTF-8 are supported.
      */
     public Document(File file)
-        throws java.io.FileNotFoundException, java.io.IOException
+        throws java.io.FileNotFoundException
     {
-        plainText = "";
-        BufferedReader reader = new BufferedReader(new FileReader(file));
-        String line;
-        while ((line = reader.readLine()) != null) {
-            plainText += new String(line.getBytes(), "UTF-8") + "\n";
+        this();
+        
+        BufferedReader reader = null;
+        try {
+            plainText = "";
+            reader = new BufferedReader(new FileReader(file));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                plainText += new String(line.getBytes(), "UTF-8") + "\n";
+            }
         }
-        reader.close();
+        catch (java.io.IOException e) {
+            System.err.println(e);
+        }
+        
+        try {
+            if (reader != null) reader.close();
+        }
+        catch (java.io.IOException e) {
+            System.err.println(e);
+        }
     }
     
     /**
@@ -296,20 +329,148 @@ public class Document
     }
     
     /**
-     * Encode the document as an XML string with the segments tagged.
+     * Encode the document as an XML document with the segments tagged.
      *
-     * <p><b>TODO: not implemented yet</b></p>
-     * The root element is "document",
+     * The root element is "document" in the namespace "",
      * each segment is encoded as an element called "segment"
      * with its properties as XML attributes.
      * Overlapping segments are split so that the result is a tree.
      *
      * @param segments the segments that will be marked as XML elements
+     * @return XML document
+     */
+    public org.w3c.dom.Document getXML(SegmentList segments)
+    {
+        System.err.println("getXML() start");
+        // get an instance of the DOMImplementation registry
+        // get a DOM implementation the Level 3 XML module
+        DOMImplementation dom = registry.getDOMImplementation("XML 3.0");
+        
+        org.w3c.dom.Document xmlDocument = dom.createDocument("http://matracas.org/ns/historadar/", "document", null);
+        Element root = xmlDocument.getDocumentElement();
+        if (plainText != null) {
+            java.util.Stack<Segment> stack = new java.util.Stack<Segment>();
+            Element parentElement = root;
+            int tagBegin, tagEnd;
+            tagBegin = 0;
+            tagEnd   = plainText.length();
+            int currentCharacter = 0;
+            Segment parentSegment = null;
+            Iterator<Document.Segment> i = segments.iterator();
+            while (i.hasNext()) {
+                Segment segment = i.next();
+                System.err.println("--------------------\nSegment [" + segment.getBegin() + ", " + segment.getEnd() + "] "
+                                   + segment.get("pattern-name") + ": "
+                                   + getPlainText(segment));
+                if (currentCharacter < segment.getBegin()) {
+                    currentCharacter = appendText(parentElement, plainText, currentCharacter, segment.getBegin());
+                }
+                
+                if (stack.empty()) parentSegment = null;
+                else               parentSegment = stack.peek();
+                
+                if (null == parentSegment) {
+                    // ... [segment]
+                    System.err.println("// ... [segment]");
+                    currentCharacter = appendText(parentElement, plainText, currentCharacter, segment.getBegin());
+                    
+                    parentElement = appendElement(parentElement, segment);
+                    stack.push(segment);
+                }
+                else if (segment.getBegin() >= parentSegment.getEnd()) {
+                    // [parentSegment] ... [segment]
+                    System.err.println("// [parentSegment] ... [segment]");
+                    // currentCharacter should be here the same as segment.getBegin()
+                    boolean ref = "ref".equals(parentElement.getNodeName());
+                    while (parentSegment != null && segment.getBegin() >= parentSegment.getEnd()) {
+                        System.err.println("parentSegment: [" + parentSegment.getBegin() + ", " + parentSegment.getEnd() + "], currentCharacter = " + currentCharacter);
+                        currentCharacter = appendText(parentElement, plainText, currentCharacter, parentSegment.getEnd());
+                        //String appended = plainText.substring(currentCharacter, parentSegment.getEnd());
+                        //System.err.println("Appended to " + parentElement.getNodeName() + ": " + appended);
+                        if (parentElement.getParentNode() instanceof Element) {
+                            parentElement = (Element) parentElement.getParentNode();
+                            System.err.println("Parent element is now back to " + parentElement.getNodeName());
+                            stack.pop();// == parentSegment
+                            if (stack.empty()) parentSegment = null;
+                            else               parentSegment = stack.peek();
+                        }
+                        else {
+                            // else error
+                            System.err.println("Error: parent element can not be the document");
+                        }
+                    }
+                    
+                    currentCharacter = appendText(parentElement, plainText, currentCharacter, segment.getBegin());
+                    
+                    parentElement = appendElement(parentElement, segment);
+                    stack.push(segment);
+                }
+                else {
+                    System.err.println("// [parentSegment... [segment]...]");
+                    // [parentSegment...[segment]...]
+                    // Here we could deal with overlaps, but we ignore that for now.
+                    // We assume this means that the current segment is contained in the parent.
+                    currentCharacter = appendText(parentElement, plainText, currentCharacter, segment.getBegin());
+                    
+                    parentElement = appendElement(parentElement, segment);
+                    stack.push(segment);
+                }
+            }
+            
+            if (parentSegment != null) {
+                currentCharacter = appendText(parentElement, plainText, currentCharacter, parentSegment.getEnd());
+            }
+            // Text after the last segment:
+            System.err.println("text after last segment: " + currentCharacter + "..." + plainText.length());
+            currentCharacter = appendText(root, plainText, currentCharacter, plainText.length());
+        }
+        
+        System.err.println("getXML() end");
+        return xmlDocument;
+    }
+    
+    private static int appendText(Element element, String text, int begin, int end)
+    {
+        if (begin >= 0 && begin < end && end <= text.length()) {
+            appendText(element, text.substring(begin, end));
+            return end;
+        }
+        else {
+            return begin;
+        }
+    }
+    
+    private static void appendText(Element element, String text)
+    {
+        element.appendChild(element.getOwnerDocument().createTextNode(text.replace("", "\n------------------------------------------------------\n")));
+    }
+    
+    private static Element appendElement(Element element, Segment segment)
+    {
+        String tagName = segment.get("pattern-name");
+        if (null == tagName) tagName = "segment";
+        Element tag = element.getOwnerDocument().createElement(tagName);
+        element.appendChild(tag);
+        
+        return tag;
+    }
+    
+    /**
+     * Encode the document as an XML string with the segments tagged.
+     *
+     * It is the serialized version of the document from {@link #getXML(SegmentList)}
+     *
+     * @param segments the segments that will be marked as XML elements
      * @return serialized XML document
      */
-    public String getXmlString(SegmentList segments)
+    public String getXMLString(SegmentList segments)
     {
-        return "<document>" + plainText + "</document>";
+        DOMImplementationLS loadSave = (DOMImplementationLS) registry.getDOMImplementation("LS");
+        if (null == loadSave) return "<document plain='true'>" + plainText + "</document>";
+        
+        org.w3c.dom.Document xmlDocument = getXML(segments);
+        
+        return loadSave.createLSSerializer().writeToString(xmlDocument);
     }
     
     /**
@@ -334,6 +495,7 @@ public class Document
             String identifier;
             File[] files = directory.listFiles();
             for (int i = 0; i < files.length; ++i) {
+                System.err.println("Loading file " + i + " of " + files.length + ": " + files[i].getName());
                 document = null;
                 try {
                     if (files[i].getName().endsWith(".txt")) { 
@@ -342,9 +504,6 @@ public class Document
                 }
                 catch (java.io.FileNotFoundException e) {
                     System.err.println("File not found: " + files[i].getName());
-                }
-                catch (java.io.IOException e) {
-                    System.err.println("IO error: " + e);
                 }
                 
                 if (document != null) {
