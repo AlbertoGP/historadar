@@ -38,21 +38,31 @@ public class SimpleRegexp extends NER
     
     public SimpleRegexp(Document.Collection collection)
     {
-        // TODO: linguistic analysis through the collection
-        // These are some dumb examples until this is implemented:
-        entities.add(person, "not here nor there");
-        entities.add(person, "Big Kahuna");
-        entities.add(person, "His Excellence Mister Foolserrand");
-        entities.add(person, "Totem Master");
-        entities.add(organization, "Council of Notable People");
-        
-        // Now build the patterns to match them:
-        patterns = new Document.PatternTable();
-        for (Map.Entry<String, Entities> type : entities.entrySet()) {
-            for (String entity : type.getValue()) {
-                patterns.put(type.getKey(), entity);
-            }
-        }
+//        // TODO: linguistic analysis through the collection
+//        // These are some dumb examples until this is implemented:
+//        entities.add(person, "the Prime Minister");
+//        entities.add(person, "the King of Greece");
+//        entities.add(person, "Earl Curzon of Kedleston");
+//        entities.add(location, "Germany");
+//        entities.add(location, "Greece");
+//
+//        // Now build the patterns to match them:
+//        patterns = new Document.PatternTable();
+//        for (Map.Entry<String, Entities> type : entities.entrySet()) {
+//            for (String entity : type.getValue()) {
+//                patterns.put(type.getKey(), entity);
+//            }
+//        }
+                 patterns.put("country",   
+                 "\\b(Spain|France|Germany|USA|Greece|Italy|Russia|Portugal|Switzerland|Austria|Belgium|Netherlands|Denmark|Sweden|Morocco" +
+                 "|Romania|the Balkans|Turkey|England|Bulgaria)\\b"
+                 );
+         patterns.put("person",    "\\b(the Prime Minister|Lord Curzon|Vice-Admiral|Commander-in-Chief|Under-Secratary of State for Foreign Affairs" +
+                 "|the Sherif|Chief of the Imperial General Staff|Sir William Robertson|General Sarrail|Mr. Chamberlain|Lord Harding|Sir G. Buchanan|McMahon)\\b"
+                 );
+         patterns.put("city",    
+                 "\\b(Rome|Paris|Larissa|Medina|Salonica|Petrograd|Mecca|Athens)\\b"
+                 );
     }
     
     /**
@@ -67,6 +77,7 @@ public class SimpleRegexp extends NER
         String plainText = document.getPlainText();
         
         // TODO: extract entities form plain text
+        segments = document.segment(patterns);
         
         return segments;
     }
