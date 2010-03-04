@@ -34,6 +34,8 @@ import java.util.Iterator;
 import org.matracas.historadar.Document;
 import org.matracas.historadar.nlp.OCR;
 import org.matracas.historadar.nlp.Metadata;
+import org.matracas.historadar.nlp.NER;
+import org.matracas.historadar.nlp.ner.SimpleRegexp;
 
 /**
  * Main class of HistoRadar, with the GUI application.
@@ -134,11 +136,8 @@ public class View implements ActionListener
         }
         
         System.err.println("Tagging text...");
-        Document.PatternTable patterns = new Document.PatternTable();
-        patterns.put("sentence", "[^.:!?]+[.:!?]");
-        patterns.put("rank", "\\b(Lieutenant|Captain)\\b");
-        patterns.put("ref", "\\b(Reference)\\b");
-        Document.SegmentList segments = document.segment(patterns);
+        NER tagger = new SimpleRegexp(documents);
+        Document.SegmentList segments = tagger.getEntities(document);
         
         String content = document.getXMLString(segments);
         documentView.setText(content);
