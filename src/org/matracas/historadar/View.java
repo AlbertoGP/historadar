@@ -26,8 +26,10 @@ import javax.swing.*;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
+import javax.swing.text.html.HTMLDocument;
 import java.io.File;
 import java.util.Iterator;
 
@@ -44,10 +46,13 @@ public class View implements ActionListener
 {
     private JFrame window;
     private JTextPane documentView;
+    private JTextPane documentSourceView;
     private HeatMap heatMap;
     private JPanel metadataPane;
     
     protected Document.Collection documents;
+    protected Document document;
+    Document.SegmentList segments;
     
     public View(String[] args)
     {
@@ -57,9 +62,15 @@ public class View implements ActionListener
         window.setSize(800,600);
         buildGUI(window);
         window.setVisible(true);
+        
+        document = null;
+        
         if (args.length == 1) {
             loadCollection(new File(args[0]));
-            if (documents != null) showDocument();
+            if (documents != null) {
+                document = documents.getDocument(null);
+            }
+            showDocument();
         }
         else {
             documents = null;
@@ -77,6 +88,11 @@ public class View implements ActionListener
     public void actionPerformed(ActionEvent e)
     {
         String command = e.getActionCommand();
+        doCommand(command);
+    }
+    
+    protected void doCommand(String command)
+    {
         if ("quit".equals(command)) {
             System.exit(0);
         }
@@ -105,9 +121,10 @@ public class View implements ActionListener
         }
     }
     
-    protected void showDocument()
+    protected void annotateDocument()
     {
-        Document document = documents.getDocumentIterator().next();
+        if (null == document) return;
+        
         // OCR correction
         System.err.println("Correcting OCR...");
         OCR ocr = new OCR(documents);
@@ -134,13 +151,29 @@ public class View implements ActionListener
                 metadataPane.add(new JLabel("Date: " + valueIterator.next()));
             }
         }
+        metadataPane.add(new JLabel("Identifier: " + document.getIdentifier()));
         
         System.err.println("Tagging text...");
         NER tagger = new SimpleRegexp(documents);
-        Document.SegmentList segments = tagger.getEntities(document);
+        segments = tagger.getEntities(document);
+    }
+    
+    protected void showDocument()
+    {
+        if (document == null) return;
         
-        String content = document.getXMLString(segments);
+        annotateDocument();
+        
+        String content;
+        
+        content = document.getXMLString(segments, document.getXMLVocabulary("html"));
         documentView.setText(content);
+        ((HTMLDocument) documentView.getDocument()).getStyleSheet()
+            .addRule("span { background:#FFAAAA; }");
+        
+        content = document.getXMLString(segments);
+        documentSourceView.setText(content);
+        
         System.err.println("Text set");
         
         window.validate();
@@ -150,7 +183,11 @@ public class View implements ActionListener
     {
         documentView = new JTextPane();
         documentView.setEditable(false);
-        documentView.setContentType("text/plain");
+        documentView.setContentType("text/html");
+        
+        documentSourceView = new JTextPane();
+        documentSourceView.setEditable(false);
+        documentSourceView.setContentType("text/plain");
         
         heatMap = new HeatMap();
         heatMap.addActionListener(this);
@@ -165,7 +202,11 @@ public class View implements ActionListener
         documentPane.setLayout(new BoxLayout(documentPane, BoxLayout.PAGE_AXIS));
         metadataPane.setLayout(new BoxLayout(metadataPane, BoxLayout.PAGE_AXIS));
         documentPane.add(metadataPane);
-        documentPane.add(new JScrollPane(documentView));
+        
+        JTabbedPane tabbedDocumentView = new JTabbedPane();
+        tabbedDocumentView.addTab("Source", null, new JScrollPane(documentSourceView), "XML source of the annotated document");
+        tabbedDocumentView.addTab("Document", null, new JScrollPane(documentView), "The annotated document");
+        documentPane.add(tabbedDocumentView);
         
         JSplitPane view = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, documentPane, heatMapPane);
         view.setOneTouchExpandable(true);

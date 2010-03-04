@@ -41,40 +41,34 @@ import org.w3c.dom.Element;
  */
 public class Document
 {
-    private String plainText;
-    org.w3c.dom.bootstrap.DOMImplementationRegistry registry;
+    protected String plainText;
+    protected String identifier;
     
     /**
      * Constructs an empty document.
      *
      * The content can be set later with {@link #setPlainText(String)}
+     *
+     * @param identifier string identifier for the document
      */
-    public Document()
+    public Document(String identifier)
     {
-        registry = null;
-        try {
-            registry = org.w3c.dom.bootstrap.DOMImplementationRegistry.newInstance();
-        }
-        catch (java.lang.ClassNotFoundException e) {
-            System.err.println("Error: no XML DOM implementation available:\n" + e);
-        }
-        catch (java.lang.InstantiationException e) {
-            System.err.println("Error: XML DOM instantiation exception:\n" + e);
-        }
-        catch (java.lang.IllegalAccessException e) {
-            System.err.println("Error: XML DOM illegal access exception:\n" + e);
-        }
+        this.identifier = identifier;
     }
     
     /**
      * Constructs a new document from a file.
      *
      * At the moment only plain text files encoded as UTF-8 are supported.
+     *
+     * @param file the file from which to read the document
+     * @param identifier string identifier for the document
      */
-    public Document(File file)
+    public Document(File file, String identifier)
         throws java.io.FileNotFoundException
     {
-        this();
+        this(identifier);
+        if (null == this.identifier) this.identifier = file.getName();
         
         BufferedReader reader = null;
         try {
@@ -98,9 +92,19 @@ public class Document
     }
     
     /**
+     * Get the document's identifier as a string.
+     *
+     * @return string identifier
+     */
+    public String getIdentifier()
+    {
+        return identifier;
+    }
+    
+    /**
      * Get the plain text version of the document as a string.
      *
-     * @return string plain text content as a string
+     * @return plain text content as a string
      */
     public String getPlainText()
     {
@@ -110,7 +114,7 @@ public class Document
     /**
      * Get the plain text version of the document as a string.
      *
-     * @return string plain text content as a string
+     * @return plain text content as a string
      */
     public String getPlainText(Segment segment)
     {
@@ -264,7 +268,7 @@ public class Document
      * {
      *     public static void main(String args[])
      *     {
-     *         Document document = new Document();
+     *         Document document = new Document("example-document");
      *         document.setPlainText("The rain in Spain falls mainly on the plain. The cats in France smoke fragance.");
      *         Document.PatternTable patterns = new Document.PatternTable();
      *         patterns.put("sentence",    Pattern.compile("[^.:!?]+[.:!?]"));
@@ -343,10 +347,23 @@ public class Document
         return getXML(segments, new XMLVocabulary());
     }
     
+    /**
+     * Encode the document as an XML document with the segments tagged,
+     * using the given XML vocabulary.
+     *
+     * The root element is "document" in the namespace "",
+     * each segment is encoded as an element called "segment"
+     * with its properties as XML attributes.
+     * Overlapping segments are split so that the result is a tree.
+     *
+     * @param segments the segments that will be marked as XML elements
+     * @param format the XML vocabulary (format) to produce
+     * @return XML document
+     */
     public org.w3c.dom.Document getXML(SegmentList segments, XMLVocabulary format)
     {
         org.w3c.dom.Document xmlDocument = format.createDocument();
-        Element root = xmlDocument.getDocumentElement();
+        Element root = format.getContentElement();
         
         if (plainText != null) {
             java.util.Stack<Segment> stack = new java.util.Stack<Segment>();
@@ -410,13 +427,61 @@ public class Document
         return xmlDocument;
     }
     
-    public class XMLVocabulary
+    public XMLVocabulary getXMLVocabulary(String name)
     {
-        protected DOMImplementation dom = registry.getDOMImplementation("XML 3.0");
+        if ("html".equalsIgnoreCase(name) || "xhtml".equalsIgnoreCase(name)) {
+            System.err.println("html");
+            return new XMLVocabularyHTML();
+        }
+        else {
+            System.err.println("xml");
+            return new XMLVocabulary();
+        }
+    }
+    
+    public static class XMLVocabulary
+    {
+        protected org.w3c.dom.bootstrap.DOMImplementationRegistry registry;
+        protected DOMImplementation dom;
+        protected DOMImplementationLS loadSave;
+        protected org.w3c.dom.ls.LSSerializer serializer;
+        protected org.w3c.dom.Document document;
+        protected Element content;
+        
+        public XMLVocabulary()
+        {
+            try {
+                registry = org.w3c.dom.bootstrap.DOMImplementationRegistry.newInstance();
+            }
+            catch (java.lang.ClassNotFoundException e) {
+                System.err.println("Error: no XML DOM implementation available:\n" + e);
+                return;
+            }
+            catch (java.lang.InstantiationException e) {
+                System.err.println("Error: XML DOM instantiation exception:\n" + e);
+                return;
+            }
+            catch (java.lang.IllegalAccessException e) {
+                System.err.println("Error: XML DOM illegal access exception:\n" + e);
+                return;
+            }
+            
+            dom = registry.getDOMImplementation("XML 3.0");
+            loadSave = (DOMImplementationLS) registry.getDOMImplementation("LS");
+            serializer = loadSave.createLSSerializer();
+        }
         
         public org.w3c.dom.Document createDocument()
         {
-            return dom.createDocument("http://matracas.org/ns/historadar", "document", null);
+            document = dom.createDocument("http://matracas.org/ns/historadar", "document", null);
+            content = document.getDocumentElement();
+            
+            return document;
+        }
+        
+        public Element getContentElement()
+        {
+            return content;
         }
         
         public int appendText(Element element, String text, int begin, int end)
@@ -445,24 +510,45 @@ public class Document
             return tag;
         }
         
+        public String serialize(org.w3c.dom.Node node)
+        {
+            return serializer.writeToString(node);
+        }
+        
     }
     
-    public class XMLVocabularyHTML extends XMLVocabulary
+    public static class XMLVocabularyHTML extends XMLVocabulary
     {
+        public XMLVocabularyHTML()
+        {
+            super();
+            serializer.getDomConfig().setParameter("xml-declaration", Boolean.FALSE);
+        }
+        
         public org.w3c.dom.Document createDocument()
         {
-            return dom.createDocument("http://www.w3.org/1999/xhtml", "document", null);
+            document = dom.createDocument("http://www.w3.org/1999/xhtml", "html", null);
+            content = document.createElement("body");
+            document.getDocumentElement().appendChild(content);
+            
+            return document;
         }
         
         public Element appendElement(Element element, Segment segment)
         {
             String tagName = segment.get("pattern-name");
             if (null == tagName) tagName = "segment";
-            Element tag = element.getOwnerDocument().createElement("div");
+            Element tag = element.getOwnerDocument().createElement("span");
             tag.setAttribute("class", tagName);
+            tag.setAttribute("title", tagName);
             element.appendChild(tag);
             
             return tag;
+        }
+        
+        public String serialize(org.w3c.dom.Node node)
+        {
+            return serializer.writeToString(node).replace("\n", "<br/>");
         }
         
     }
@@ -477,12 +563,22 @@ public class Document
      */
     public String getXMLString(SegmentList segments)
     {
-        DOMImplementationLS loadSave = (DOMImplementationLS) registry.getDOMImplementation("LS");
-        if (null == loadSave) return "<document plain='true'>" + plainText + "</document>";
-        
-        org.w3c.dom.Document xmlDocument = getXML(segments);
-        
-        return loadSave.createLSSerializer().writeToString(xmlDocument);
+        return getXMLString(segments, new XMLVocabulary());
+    }
+    
+    /**
+     * Encode the document as an XML string with the segments tagged,
+     * using the given XML vocabulary.
+     *
+     * It is the serialized version of the document from {@link #getXML(SegmentList)}
+     *
+     * @param segments the segments that will be marked as XML elements
+     * @param format the XML vocabulary (format) to produce
+     * @return serialized XML document
+     */
+    public String getXMLString(SegmentList segments, XMLVocabulary format)
+    {
+        return format.serialize(getXML(segments, format));
     }
     
     /**
@@ -511,7 +607,7 @@ public class Document
                 document = null;
                 try {
                     if (files[i].getName().endsWith(".txt")) { 
-                        document = new Document(files[i]);
+                        document = new Document(files[i], null);
                     }
                 }
                 catch (java.io.FileNotFoundException e) {
@@ -554,6 +650,11 @@ public class Document
          */
         public Document getDocument(String identifier)
         {
+            if (null == identifier) {
+                if (documents.isEmpty()) return null;
+                else                   return getDocumentIterator().next();
+            }
+            
             return documents.get(identifier);
         }
         
