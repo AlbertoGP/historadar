@@ -21,23 +21,23 @@ public class NamedEntityRecognizer {
 	 * @param document
 	 * @return
 	 */
-	public String getAttendancePart(Document document){
-		String attendanceList = "";
+	public String getAttendanceBlock(Document document){
+		String attendancBlock = "";
 		
 		Pattern pattern = Pattern.compile("present ?:(.*?)(\f|[1\\]] ?\\.)", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE | Pattern.CANON_EQ);
 		Matcher matcher = pattern.matcher(document.getPlainText());
 		
         if (matcher.find()){
-	        attendanceList = matcher.group(1);
+	        attendancBlock = matcher.group(1);
         }
         
-        return attendanceList;
+        return attendancBlock;
     }
 	
-	public ArrayList<String> getAttendanceNames(String attendancePart){
+	public ArrayList<String> getAttendanceNames(String attendanceBlock){
 		ArrayList<String> attendanceNames = new ArrayList<String>();
 		Pattern pattern = Pattern.compile("([A-Z][ .]{1,2}\\. ?(?:[A-Z]{1,2}\\.)?)\\s+([A-Z]+[ -]?[A-Z]*)(\\*?)([,.])", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE | Pattern.CANON_EQ);
-		Matcher matcher = pattern.matcher(attendancePart);
+		Matcher matcher = pattern.matcher(attendanceBlock);
 		
         while (matcher.find()){
 	        attendanceNames.add(matcher.group(0));
@@ -46,8 +46,24 @@ public class NamedEntityRecognizer {
         return attendanceNames;
 	}
 	
-	public ArrayList<String> GetAllAttendanceParts(Document.Collection documentCollection){
+	public ArrayList<String> getAttendanceNames(ArrayList<String> attendanceBlocks){
+		String oneLargeBlock = new String();
+		
+		for (String attendanceBlock : attendanceBlocks) {
+			oneLargeBlock += attendanceBlock;
+		}
+		
+		return getAttendanceNames(oneLargeBlock);
+	}
+	
+	public ArrayList<String> getAllAttendanceBlocks(Document.Collection documentCollection){
 		ArrayList<String> allAttendanceParts = new ArrayList<String>();
+		
+		Iterator<Document> documentIterator = documentCollection.getDocumentIterator();
+		
+		while (documentIterator.hasNext()) {
+			allAttendanceParts.add(getAttendanceBlock(documentIterator.next()));
+		}
 		
 		return allAttendanceParts;
 	}
