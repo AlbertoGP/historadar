@@ -105,40 +105,40 @@ public class Metadata
 		try {
 	        entries.add(title, "NO TITLE FOUND YET");
 	        
-	        Pattern pattern = Pattern.compile("held.+?on.?((monday|tuesday|wednesday|thursday|friday|saturday|sunday).+?)present", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE | Pattern.CANON_EQ); //Thanks to http://www.regular-expressions.info/java.html
+	        Pattern pattern = Pattern.compile("held.+?((\\w+?day|\\w+?ary|march|april|may|june|july|august|\\w+?mber|\\w+?ober).+?(?:\\. ?m|oon))", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE | Pattern.CANON_EQ); //Thanks to http://www.regular-expressions.info/java.html
 	        Matcher matcher = pattern.matcher(plainText);
 	        if (matcher.find()){
 		        String plainDate = matcher.group(1);
-	        	// entries.add(date, plainDate);
+	        	entries.add(date, plainDate);
 		        
-		        // Friday, October 11, 1918, at 4 p.m.
-		        pattern = pattern.compile("\\S+\\s+(\\S+)\\s+(\\d+)\\D+(\\d+)\\D+(.+)", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE | Pattern.CANON_EQ);
+		        // Friday, October 11, 1918, at 4 p.m.   and  March 1, 1918, at 11-30 a.m.
+		        pattern = pattern.compile("(?:\\w+day\\W*)?(\\w+)\\D+(\\d+)\\D+([1-9][ 0-9]{3,6})\\D+(.+)", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE | Pattern.CANON_EQ);
 		        matcher = pattern.matcher(plainDate);
 		        
 		        if(matcher.find()){
-			        monthString = matcher.group(1);
-			        dayString = matcher.group(2);
-			        yearString = matcher.group(3);
-			        String timeString = matcher.group(4);
+			        monthString = matcher.group(1).replace(" ", "");
+			        dayString = matcher.group(2).replace(" ", "");
+			        yearString = matcher.group(3).replace(" ", "");
+			        String timeString = matcher.group(4).replace(" ", "");
 			        
 			        // Split up times like "3-15 p.m.": "1130 a.m.", "4 p.m.", "12 noon"
 		        	pattern = pattern.compile("(.*)(a|p|n).*", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE | Pattern.CANON_EQ);
 		        	matcher = pattern.matcher(timeString);
 		        	if(matcher.find()){
-				        String hourMinutePart = matcher.group(1);
+				        String hourMinutePart = matcher.group(1).replace(" ", "");
 		        		dayTimeString = matcher.group(2).toLowerCase(); // must be "a" or "p" for calculating the integered hour time later
-				        pattern = pattern.compile("(\\d{1,2})\\D*?(\\d*)", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE | Pattern.CANON_EQ);
-				        matcher = pattern.matcher(hourMinutePart);
+				        //pattern = pattern.compile("([0-9]{1,2})\\D*?(\\d*)", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE | Pattern.CANON_EQ);
+		        		pattern = pattern.compile("(?:(\\d{1,2})\\D+(\\d*)|(?:(\\d\\d)(\\d\\d)))");
+		        		matcher = pattern.matcher(hourMinutePart);
 				        if(matcher.find()){
-				        	hourString = matcher.group(1);
-				        	if (matcher.groupCount() > 1 && !matcher.group(2).equals("")){
-				        		minuteString = matcher.group(2);
-				        	}else{
+				        	hourString = ((!matcher.group(1).equals("")) ? (matcher.group(1)) : (matcher.group(3)));
+				        	minuteString = ((!matcher.group(2).equals("")) ? (matcher.group(2)) : (matcher.group(4)));
+				        	if (minuteString.equals("")){
 				        		minuteString = "00";
 				        	}
 				        }
 		        	}
-			        // entries.add(date, dayString + " " + monthString + " " + yearString + " at " + hourString + ":" + minuteString + " " + dayTimeString + ".m.");
+			        entries.add(date, dayString + " " + monthString + " " + yearString + " at " + hourString + ":" + minuteString + " " + dayTimeString + ".m.");
 			        
 			        
 			        /* Conversion of time values to Integers */
@@ -187,10 +187,9 @@ public class Metadata
 		}
 	    catch(Exception e){
 	    	entries.add(date, e.getLocalizedMessage());
+	    	System.out.println(e.getLocalizedMessage());
 	    }
-	    finally{
-	    	return entries;
-	    }
+	    return entries;
     }
     
     public class Values extends Vector<String>

@@ -58,9 +58,32 @@ public class OCR
         /* Get proper years:
          * get rid of one or more spaces between single digits to get proper year representations (1 9 1 8 --> 1918)
          */
-        Pattern pattern = Pattern.compile("([1-9])[^0-9]?([0-9])[^0-9]?([0-9])[^0-9]?([0-9])");
-        Matcher matcher = pattern.matcher(text);
+        Pattern pattern; 
+        Matcher matcher;
+        
+        correctedText = text;
+        
+        // Get rid of spaces within words. Unfortunately also concatenates words --> splitter needed.
+        pattern = Pattern.compile("(\\b\\S)\\b\\s\\b");
+        matcher = pattern.matcher(text);
+        correctedText = matcher.replaceAll("$1");
+        
+        /*
+        // Correct 1 9 1 8 to 1918
+        pattern = Pattern.compile("([1-9])[^0-9]?([0-9])[^0-9]?([0-9])[^0-9]?([0-9])");
+        matcher = pattern.matcher(text);
         correctedText = matcher.replaceAll("$1$2$3$4");
+        
+        // Correct "\d \d" to "\d\d"
+        pattern = Pattern.compile("(\\d)\\D?(\\d)");
+        matcher = pattern.matcher(correctedText);
+        correctedText = matcher.replaceAll("$1$2");
+        // And once again:
+        pattern = Pattern.compile("(\\d)\\D?(\\d)");
+        matcher = pattern.matcher(correctedText);
+        correctedText = matcher.replaceAll("$1$2");
+        */
+        
         correctionCount = 0;
         
         document.setPlainText(correctedText);
