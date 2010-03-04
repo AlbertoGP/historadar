@@ -383,6 +383,8 @@ public class Document
                         }
                     }
                     
+                    currentCharacter = format.appendText(parentElement, plainText, currentCharacter, segment.getBegin());
+                    
                     parentElement = format.appendElement(parentElement, segment);
                     stack.push(segment);
                 }
