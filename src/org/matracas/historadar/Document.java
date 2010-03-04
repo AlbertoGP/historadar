@@ -35,7 +35,6 @@ import java.util.regex.Matcher;
 import org.w3c.dom.DOMImplementation;
 import org.w3c.dom.ls.DOMImplementationLS;
 import org.w3c.dom.Element;
-import org.w3c.dom.Text;
 
 /**
  * Source text document.
@@ -341,118 +340,129 @@ public class Document
      */
     public org.w3c.dom.Document getXML(SegmentList segments)
     {
-        System.err.println("getXML() start");
-        // get an instance of the DOMImplementation registry
-        // get a DOM implementation the Level 3 XML module
-        DOMImplementation dom = registry.getDOMImplementation("XML 3.0");
-        
-        org.w3c.dom.Document xmlDocument = dom.createDocument("http://matracas.org/ns/historadar/", "document", null);
+        return getXML(segments, new XMLVocabulary());
+    }
+    
+    public org.w3c.dom.Document getXML(SegmentList segments, XMLVocabulary format)
+    {
+        org.w3c.dom.Document xmlDocument = format.createDocument();
         Element root = xmlDocument.getDocumentElement();
+        
         if (plainText != null) {
             java.util.Stack<Segment> stack = new java.util.Stack<Segment>();
             Element parentElement = root;
-            int tagBegin, tagEnd;
-            tagBegin = 0;
-            tagEnd   = plainText.length();
-            int currentCharacter = 0;
             Segment parentSegment = null;
+            int currentCharacter = 0;
             Iterator<Document.Segment> i = segments.iterator();
             while (i.hasNext()) {
                 Segment segment = i.next();
-                System.err.println("--------------------\nSegment [" + segment.getBegin() + ", " + segment.getEnd() + "] "
-                                   + segment.get("pattern-name") + ": "
-                                   + getPlainText(segment));
-                if (currentCharacter < segment.getBegin()) {
-                    currentCharacter = appendText(parentElement, plainText, currentCharacter, segment.getBegin());
-                }
-                
                 if (stack.empty()) parentSegment = null;
                 else               parentSegment = stack.peek();
                 
                 if (null == parentSegment) {
                     // ... [segment]
-                    System.err.println("// ... [segment]");
-                    currentCharacter = appendText(parentElement, plainText, currentCharacter, segment.getBegin());
+                    currentCharacter = format.appendText(parentElement, plainText, currentCharacter, segment.getBegin());
                     
-                    parentElement = appendElement(parentElement, segment);
+                    parentElement = format.appendElement(parentElement, segment);
                     stack.push(segment);
                 }
                 else if (segment.getBegin() >= parentSegment.getEnd()) {
                     // [parentSegment] ... [segment]
-                    System.err.println("// [parentSegment] ... [segment]");
-                    // currentCharacter should be here the same as segment.getBegin()
-                    boolean ref = "ref".equals(parentElement.getNodeName());
-                    while (parentSegment != null && segment.getBegin() >= parentSegment.getEnd()) {
-                        System.err.println("parentSegment: [" + parentSegment.getBegin() + ", " + parentSegment.getEnd() + "], currentCharacter = " + currentCharacter);
-                        currentCharacter = appendText(parentElement, plainText, currentCharacter, parentSegment.getEnd());
-                        //String appended = plainText.substring(currentCharacter, parentSegment.getEnd());
-                        //System.err.println("Appended to " + parentElement.getNodeName() + ": " + appended);
+                    while (parentSegment != null
+                           && segment.getBegin() >= parentSegment.getEnd()) {
+                        currentCharacter = format.appendText(parentElement, plainText, currentCharacter, parentSegment.getEnd());
+                        
                         if (parentElement.getParentNode() instanceof Element) {
                             parentElement = (Element) parentElement.getParentNode();
-                            System.err.println("Parent element is now back to " + parentElement.getNodeName());
                             stack.pop();// == parentSegment
                             if (stack.empty()) parentSegment = null;
                             else               parentSegment = stack.peek();
                         }
                         else {
-                            // else error
                             System.err.println("Error: parent element can not be the document");
                         }
                     }
                     
-                    currentCharacter = appendText(parentElement, plainText, currentCharacter, segment.getBegin());
-                    
-                    parentElement = appendElement(parentElement, segment);
+                    parentElement = format.appendElement(parentElement, segment);
                     stack.push(segment);
                 }
                 else {
-                    System.err.println("// [parentSegment... [segment]...]");
                     // [parentSegment...[segment]...]
                     // Here we could deal with overlaps, but we ignore that for now.
                     // We assume this means that the current segment is contained in the parent.
-                    currentCharacter = appendText(parentElement, plainText, currentCharacter, segment.getBegin());
+                    currentCharacter = format.appendText(parentElement, plainText, currentCharacter, segment.getBegin());
                     
-                    parentElement = appendElement(parentElement, segment);
+                    parentElement = format.appendElement(parentElement, segment);
                     stack.push(segment);
                 }
             }
             
             if (parentSegment != null) {
-                currentCharacter = appendText(parentElement, plainText, currentCharacter, parentSegment.getEnd());
+                currentCharacter = format.appendText(parentElement, plainText, currentCharacter, parentSegment.getEnd());
             }
+            
             // Text after the last segment:
-            System.err.println("text after last segment: " + currentCharacter + "..." + plainText.length());
-            currentCharacter = appendText(root, plainText, currentCharacter, plainText.length());
+            currentCharacter = format.appendText(root, plainText, currentCharacter, plainText.length());
         }
         
-        System.err.println("getXML() end");
         return xmlDocument;
     }
     
-    private static int appendText(Element element, String text, int begin, int end)
+    public class XMLVocabulary
     {
-        if (begin >= 0 && begin < end && end <= text.length()) {
-            appendText(element, text.substring(begin, end));
-            return end;
-        }
-        else {
-            return begin;
-        }
-    }
-    
-    private static void appendText(Element element, String text)
-    {
-        element.appendChild(element.getOwnerDocument().createTextNode(text.replace("", "\n------------------------------------------------------\n")));
-    }
-    
-    private static Element appendElement(Element element, Segment segment)
-    {
-        String tagName = segment.get("pattern-name");
-        if (null == tagName) tagName = "segment";
-        Element tag = element.getOwnerDocument().createElement(tagName);
-        element.appendChild(tag);
+        protected DOMImplementation dom = registry.getDOMImplementation("XML 3.0");
         
-        return tag;
+        public org.w3c.dom.Document createDocument()
+        {
+            return dom.createDocument("http://matracas.org/ns/historadar", "document", null);
+        }
+        
+        public int appendText(Element element, String text, int begin, int end)
+        {
+            if (begin >= 0 && begin < end && end <= text.length()) {
+                appendText(element, text.substring(begin, end));
+                return end;
+            }
+            else {
+                return begin;
+            }
+        }
+        
+        public void appendText(Element element, String text)
+        {
+            element.appendChild(element.getOwnerDocument().createTextNode(text.replace("", "\n------------------------------------------------------\n")));
+        }
+        
+        public Element appendElement(Element element, Segment segment)
+        {
+            String tagName = segment.get("pattern-name");
+            if (null == tagName) tagName = "segment";
+            Element tag = element.getOwnerDocument().createElement(tagName);
+            element.appendChild(tag);
+            
+            return tag;
+        }
+        
+    }
+    
+    public class XMLVocabularyHTML extends XMLVocabulary
+    {
+        public org.w3c.dom.Document createDocument()
+        {
+            return dom.createDocument("http://www.w3.org/1999/xhtml", "document", null);
+        }
+        
+        public Element appendElement(Element element, Segment segment)
+        {
+            String tagName = segment.get("pattern-name");
+            if (null == tagName) tagName = "segment";
+            Element tag = element.getOwnerDocument().createElement("div");
+            tag.setAttribute("class", tagName);
+            element.appendChild(tag);
+            
+            return tag;
+        }
+        
     }
     
     /**
