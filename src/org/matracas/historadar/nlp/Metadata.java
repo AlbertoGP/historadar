@@ -91,98 +91,160 @@ public class Metadata
                 
         String monthString = "";
         String dayString = "";
+        String dayOfWeekString = "";
         String yearString = "";
         String hourString = ""; 
 		String minuteString = "";
 		String dayTimeString = ""; // "a" OR "p" (a.m. or p.m.)
 		
-		Integer month;
-		Integer day;
-		Integer year;
-		Integer hour;   // > 12 if dayTimeString.contains("p")
-		Integer minute; 
+		Integer month = 0;
+		Integer day = 0;
+		Integer year = 0;
+		Integer hour = 0;   // > 12 if dayTimeString.contains("p")
+		Integer minute = 0;
 		
 		try {
 	        entries.add(title, "NO TITLE FOUND YET");
 	        
-	        Pattern pattern = Pattern.compile("held.+?((\\w+?day|\\w+?ary|march|april|may|june|july|august|\\w+?mber|\\w+?ober).+?(?:\\. ?m|oon))", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE | Pattern.CANON_EQ); //Thanks to http://www.regular-expressions.info/java.html
+	        Pattern pattern = Pattern.compile("held.{1,60}?((\\w+?day|\\w+?uary|march|april|may|june|july|august|\\w+?mber|\\w+?ober)\\b.+?(?:[.,] ?m[.,]?|oon))", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE | Pattern.CANON_EQ); //Thanks to http://www.regular-expressions.info/java.html
 	        Matcher matcher = pattern.matcher(plainText);
 	        if (matcher.find()){
-		        String plainDate = matcher.group(1);
+	        	String plainDate = matcher.group(1);
 	        	entries.add(date, plainDate);
 		        
-		        // Friday, October 11, 1918, at 4 p.m.   and  March 1, 1918, at 11-30 a.m.
-		        pattern = pattern.compile("(?:\\w+day\\W*)?(\\w+)\\D+(\\d+)\\D+([1-9][ 0-9]{3,6})\\D+(.+)", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE | Pattern.CANON_EQ);
+	        	// Day of week
+	        	pattern = pattern.compile("\\w+day", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE);
 		        matcher = pattern.matcher(plainDate);
-		        
 		        if(matcher.find()){
-			        monthString = matcher.group(1).replace(" ", "");
-			        dayString = matcher.group(2).replace(" ", "");
-			        yearString = matcher.group(3).replace(" ", "");
-			        String timeString = matcher.group(4).replace(" ", "");
-			        
-			        // Split up times like "3-15 p.m.": "1130 a.m.", "4 p.m.", "12 noon"
-		        	pattern = pattern.compile("(.*)(a|p|n).*", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE | Pattern.CANON_EQ);
-		        	matcher = pattern.matcher(timeString);
-		        	if(matcher.find()){
-				        String hourMinutePart = matcher.group(1).replace(" ", "");
-		        		dayTimeString = matcher.group(2).toLowerCase(); // must be "a" or "p" for calculating the integered hour time later
-				        //pattern = pattern.compile("([0-9]{1,2})\\D*?(\\d*)", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE | Pattern.CANON_EQ);
-		        		pattern = pattern.compile("(?:(\\d{1,2})\\D+(\\d*)|(?:(\\d\\d)(\\d\\d)))");
-		        		matcher = pattern.matcher(hourMinutePart);
-				        if(matcher.find()){
-				        	hourString = ((!matcher.group(1).equals("")) ? (matcher.group(1)) : (matcher.group(3)));
-				        	minuteString = ((!matcher.group(2).equals("")) ? (matcher.group(2)) : (matcher.group(4)));
-				        	if (minuteString.equals("")){
-				        		minuteString = "00";
-				        	}
-				        }
+		            dayOfWeekString = matcher.group(0);
+		            entries.add(date, dayOfWeekString);
+			    }
+		        
+		        // Month
+		        pattern = pattern.compile("\\w+ry|\\w+ber|\\w+rch|\\w+ril|may|\\wune|\\w+ly|\\w+ust", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE);
+		        matcher = pattern.matcher(plainDate);
+		        if(matcher.find()){
+		            monthString = matcher.group(0);
+		            entries.add(date, monthString);
+				}
+		        
+		        // Year:
+		        pattern = pattern.compile("(?:\\w+ry|\\w+ber|\\w+rch|\\w+ril|may|\\wune|\\w+ly|\\w+ust).+([12]\\d{3})", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE);
+		        matcher = pattern.matcher(plainDate);
+		        if(matcher.find()){
+		            yearString = matcher.group(1);
+		            entries.add(date, yearString);
+				}
+		        
+		        // Day of month: (digits before or after month)
+		        pattern = pattern.compile("(\\d\\d?).{1,5}(?:\\w+ry|\\w+ber|\\w+rch|\\w+ril|may|\\wune|\\w+ly|\\w+ust)|(?:\\w+ry|\\w+ber|\\w+rch|\\w+ril|may|\\wune|\\w+ly|\\w+ust)\\s{1,2}(\\d\\d?)", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE);
+		        matcher = pattern.matcher(plainDate);
+		        if(matcher.find()){
+		        	if (matcher.start(1) == matcher.end(1)){
+		        		dayString = matcher.group(2);
 		        	}
-			        entries.add(date, dayString + " " + monthString + " " + yearString + " at " + hourString + ":" + minuteString + " " + dayTimeString + ".m.");
-			        
-			        
-			        /* Conversion of time values to Integers */
-			        
-			        if (monthString.equalsIgnoreCase("january")) {
-						month = 1;
-					} else if (monthString.equalsIgnoreCase("february")) {
-						month = 2;
-					} else if (monthString.equalsIgnoreCase("march")) {
-						month = 3;
-					} else if (monthString.equalsIgnoreCase("april")) {
-						month = 4;
-					} else if (monthString.equalsIgnoreCase("may")) {
-						month = 5;
-					} else if (monthString.equalsIgnoreCase("june")) {
-						month = 6;
-					} else if (monthString.equalsIgnoreCase("july")) {
-						month = 7;
-					} else if (monthString.equalsIgnoreCase("august")) {
-						month = 8;
-					} else if (monthString.equalsIgnoreCase("september")) {
-						month = 9;
-					} else if (monthString.equalsIgnoreCase("october")) {
-						month = 10;
-					} else if (monthString.equalsIgnoreCase("november")) {
-						month = 11;
-					} else if (monthString.equalsIgnoreCase("december")) {
-						month = 12;
+		        	else {
+		        		dayString = matcher.group(1);
+		        	}
+		            entries.add(date, dayString);
+				}
+		        
+		        // Hour and minute
+		        pattern = pattern.compile("at\\s+(\\d{1,2})[- *o\\\\.]{0,4}(\\d*) ?(a|p|n)?", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE);
+		        matcher = pattern.matcher(plainDate);
+		        if(matcher.find()){
+		            hourString = matcher.group(1);
+		            minuteString = matcher.group(2);
+		            entries.add(date, hourString + ":" + minuteString);
+				}
+		        
+		        // Time of day
+		        pattern = pattern.compile("(a\\..*|p\\..*|noon.*)", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE);
+		        matcher = pattern.matcher(plainDate);
+		        if(matcher.find()){
+		            if (matcher.group(1).toLowerCase().startsWith("a")) {
+						dayTimeString = "a.m.";
+					} else if (matcher.group(1).toLowerCase().startsWith("p")) {
+						dayTimeString = "p.m.";
+					} else if (matcher.group(1).toLowerCase().startsWith("n")) {
+						dayTimeString = "noon";
 					} else {
-						month = 0;
+						dayTimeString = "I have no idea how you can possibly get here.";
 					}
-			        
-			        day = Integer.parseInt(dayString);
-			        year = Integer.parseInt(yearString);
-			        hour = Integer.parseInt(hourString);
-			        minute = Integer.parseInt(minuteString);
-			        
-			        if (dayTimeString.equalsIgnoreCase("p")) {
-						hour += 12;
-					}
-			        
-			        /* Adding time as split meta data */
-			        entries.add(date, year.toString() + "-" + String.format("%02d", month) + "-" + String.format("%02d", day) + " " + hour.toString() + ":" + String.format("%02d", minute));
-		        }
+		            entries.add(date, dayTimeString);
+				}
+		        
+		        
+		        /* Conversion of time values to Integers */
+		        // Month:
+		        if (monthString.equalsIgnoreCase("january")) {
+					month = 1;
+				} else if (monthString.equalsIgnoreCase("february")) {
+					month = 2;
+				} else if (monthString.equalsIgnoreCase("march")) {
+					month = 3;
+				} else if (monthString.equalsIgnoreCase("april")) {
+					month = 4;
+				} else if (monthString.equalsIgnoreCase("may")) {
+					month = 5;
+				} else if (monthString.equalsIgnoreCase("june")) {
+					month = 6;
+				} else if (monthString.equalsIgnoreCase("july")) {
+					month = 7;
+				} else if (monthString.equalsIgnoreCase("august")) {
+					month = 8;
+				} else if (monthString.equalsIgnoreCase("september")) {
+					month = 9;
+				} else if (monthString.equalsIgnoreCase("october")) {
+					month = 10;
+				} else if (monthString.equalsIgnoreCase("november")) {
+					month = 11;
+				} else if (monthString.equalsIgnoreCase("december")) {
+					month = 12;
+				} else {
+					month = 0;
+				}
+		        
+		        if (!dayString.equals("")) {day = Integer.parseInt(dayString);}
+		        if (!yearString.equals("")) {year = Integer.parseInt(yearString);}
+		        if (!hourString.equals("")) {hour = Integer.parseInt(hourString);}
+		        if (!minuteString.equals("")) {minute = Integer.parseInt(minuteString);}
+		        
+		        if (dayTimeString.toLowerCase().startsWith("p")) {
+					hour += 12;
+				}
+		        
+		        /* Adding time as split meta data */
+		        entries.add(date, String.format("%4d-%02d-%02d %d:%02d (%s)", year, month, day, hour, minute, dayTimeString));
+
+//		        // Friday, October 11, 1918, at 4 p.m.   and  March 1, 1918, at 11-30 a.m.
+//		        pattern = pattern.compile("(?:\\w+day\\W*)?(\\w+)\\D+(\\d+)\\D+([1-9][ 0-9]{3,6})\\D+(.+)", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE | Pattern.CANON_EQ);
+//		        matcher = pattern.matcher(plainDate);
+//		        
+//		        if(matcher.find()){
+//		        	monthString = matcher.group(1).replace(" ", "");
+//			        dayString = matcher.group(2).replace(" ", "");
+//			        yearString = matcher.group(3).replace(" ", "");
+//			        String timeString = matcher.group(4).replace(" ", "");
+//			        
+//			        // Split up times like "3-15 p.m.": "1130 a.m.", "4 p.m.", "12 noon"
+//		        	pattern = pattern.compile("(.*)(a|p|n).*", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE | Pattern.CANON_EQ);
+//		        	matcher = pattern.matcher(timeString);
+//		        	if(matcher.find()){
+//				        String hourMinutePart = matcher.group(1).replace(" ", "");
+//		        		dayTimeString = matcher.group(2).toLowerCase(); // must be "a" or "p" for calculating the integered hour time later
+//				        //pattern = pattern.compile("([0-9]{1,2})\\D*?(\\d*)", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE | Pattern.CANON_EQ);
+//		        		pattern = pattern.compile("(?:(\\d{1,2})\\D+(\\d*)|(?:(\\d\\d)(\\d\\d)))");
+//		        		matcher = pattern.matcher(hourMinutePart);
+//				        if(matcher.find()){
+//				        	hourString = ((!matcher.group(1).equals("")) ? (matcher.group(1)) : (matcher.group(3)));
+//				        	minuteString = ((!matcher.group(2).equals("")) ? (matcher.group(2)) : (matcher.group(4)));
+//				        	if (minuteString.equals("")){
+//				        		minuteString = "00";
+//				        	}
+//				        }
+//		        	}
+//		        }
 	        }
 		}
 	    catch(Exception e){
