@@ -34,6 +34,7 @@ import java.io.File;
 import java.util.Iterator;
 
 import org.matracas.historadar.Document;
+import org.matracas.historadar.ui.HeatMap;
 import org.matracas.historadar.nlp.OCR;
 import org.matracas.historadar.nlp.Metadata;
 import org.matracas.historadar.nlp.NER;
@@ -123,7 +124,10 @@ public class View implements ActionListener
     
     protected void annotateDocument()
     {
-        if (null == document) return;
+        if (null == document) {
+            System.err.println("annotateDocument(): document is null");
+            return;
+        }
         
         // OCR correction
         System.err.println("Correcting OCR...");
