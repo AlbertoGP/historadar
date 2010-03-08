@@ -20,7 +20,7 @@
 //
 /////////////////////////////////////////////////////////////////////////////
 
-package org.matracas.historadar;
+package org.matracas.historadar.ui;
 
 import javax.swing.JPanel;
 import javax.swing.JButton;
