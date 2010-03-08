@@ -599,9 +599,25 @@ public class Document
         {
             documents = new HashMap<String, Document>();
             
+            if (!directory.exists()) {
+                System.err.println("The directory '" + directory.getAbsolutePath() + "' does not exist.");
+                return;
+            }
             Document document;
             String identifier;
-            File[] files = directory.listFiles();
+            File[] files;
+            if (directory.isFile()) {
+                files = new File[1];
+                files[0] = directory;
+            }
+            else if (directory.isDirectory()) {
+                files = directory.listFiles();
+            }
+            else {
+                System.err.println("Not a directory or file: '" + directory.getAbsolutePath());
+                return;
+            }
+            
             for (int i = 0; i < files.length; ++i) {
                 System.err.println("Loading file " + i + " of " + files.length + ": " + files[i].getName());
                 document = null;
@@ -611,7 +627,7 @@ public class Document
                     }
                 }
                 catch (java.io.FileNotFoundException e) {
-                    System.err.println("File not found: " + files[i].getName());
+                    System.err.println("File not found: " + files[i].getAbsolutePath());
                 }
                 
                 if (document != null) {
