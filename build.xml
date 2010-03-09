@@ -14,16 +14,7 @@
     <!-- Create the build directory structure used by compile -->
     <mkdir dir="${build}"/>
   </target>
-  
-  <target name="download">
-    <!-- Download some extra data files -->
-    <get dest="lib/opennlp/models/" vebose="true" usetimestamp="true" skipexisting="true" httpusecaches="true">
-      <url url="http://opennlp.sourceforge.net/models/english/namefind/person.bin.gz"/>
-      <url url="http://opennlp.sourceforge.net/models/english/sentdetect/EnglishSD.bin.gz"/>
-      <url url="http://opennlp.sourceforge.net/models/english/tokenize/EnglishTok.bin.gz"/>
-    </get>
-  </target>
-  
+
   <target name="compile" depends="init"
           description="compile the source " >
     <!-- Compile the java code from ${src} into ${build} -->
