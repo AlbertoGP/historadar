@@ -117,7 +117,7 @@ public class Metadata
 		        matcher = pattern.matcher(plainDate);
 		        if(matcher.find()){
 		            dayOfWeekString = matcher.group(0);
-		            entries.add(date, dayOfWeekString);
+		            // entries.add(date, dayOfWeekString);
 			    }
 		        
 		        // Month
@@ -125,7 +125,7 @@ public class Metadata
 		        matcher = pattern.matcher(plainDate);
 		        if(matcher.find()){
 		            monthString = matcher.group(0);
-		            entries.add(date, monthString);
+		            // entries.add(date, monthString);
 				}
 		        
 		        // Year:
@@ -133,7 +133,7 @@ public class Metadata
 		        matcher = pattern.matcher(plainDate);
 		        if(matcher.find()){
 		            yearString = matcher.group(1);
-		            entries.add(date, yearString);
+		            // entries.add(date, yearString);
 				}
 		        
 		        // Day of month: (digits before or after month)
@@ -146,7 +146,7 @@ public class Metadata
 		        	else {
 		        		dayString = matcher.group(1);
 		        	}
-		            entries.add(date, dayString);
+		            // entries.add(date, dayString);
 				}
 		        
 		        // Hour and minute
@@ -155,7 +155,7 @@ public class Metadata
 		        if(matcher.find()){
 		            hourString = matcher.group(1);
 		            minuteString = matcher.group(2);
-		            entries.add(date, hourString + ":" + minuteString);
+		            // entries.add(date, hourString + ":" + minuteString);
 				}
 		        
 		        // Time of day
@@ -171,7 +171,7 @@ public class Metadata
 					} else {
 						dayTimeString = "I have no idea how you can possibly get here.";
 					}
-		            entries.add(date, dayTimeString);
+		            // entries.add(date, dayTimeString);
 				}
 		        
 		        
@@ -216,35 +216,6 @@ public class Metadata
 		        
 		        /* Adding time as split meta data */
 		        entries.add(date, String.format("%4d-%02d-%02d %d:%02d (%s)", year, month, day, hour, minute, dayTimeString));
-
-//		        // Friday, October 11, 1918, at 4 p.m.   and  March 1, 1918, at 11-30 a.m.
-//		        pattern = pattern.compile("(?:\\w+day\\W*)?(\\w+)\\D+(\\d+)\\D+([1-9][ 0-9]{3,6})\\D+(.+)", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE | Pattern.CANON_EQ);
-//		        matcher = pattern.matcher(plainDate);
-//		        
-//		        if(matcher.find()){
-//		        	monthString = matcher.group(1).replace(" ", "");
-//			        dayString = matcher.group(2).replace(" ", "");
-//			        yearString = matcher.group(3).replace(" ", "");
-//			        String timeString = matcher.group(4).replace(" ", "");
-//			        
-//			        // Split up times like "3-15 p.m.": "1130 a.m.", "4 p.m.", "12 noon"
-//		        	pattern = pattern.compile("(.*)(a|p|n).*", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE | Pattern.CANON_EQ);
-//		        	matcher = pattern.matcher(timeString);
-//		        	if(matcher.find()){
-//				        String hourMinutePart = matcher.group(1).replace(" ", "");
-//		        		dayTimeString = matcher.group(2).toLowerCase(); // must be "a" or "p" for calculating the integered hour time later
-//				        //pattern = pattern.compile("([0-9]{1,2})\\D*?(\\d*)", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE | Pattern.CANON_EQ);
-//		        		pattern = pattern.compile("(?:(\\d{1,2})\\D+(\\d*)|(?:(\\d\\d)(\\d\\d)))");
-//		        		matcher = pattern.matcher(hourMinutePart);
-//				        if(matcher.find()){
-//				        	hourString = ((!matcher.group(1).equals("")) ? (matcher.group(1)) : (matcher.group(3)));
-//				        	minuteString = ((!matcher.group(2).equals("")) ? (matcher.group(2)) : (matcher.group(4)));
-//				        	if (minuteString.equals("")){
-//				        		minuteString = "00";
-//				        	}
-//				        }
-//		        	}
-//		        }
 	        }
 		}
 	    catch(Exception e){

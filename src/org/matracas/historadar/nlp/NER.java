@@ -81,9 +81,9 @@ public class NER
         
         // TODO: extract entities form plain text
         GISModel m;
-        File personFile = new File("c:\\cygwin\\textmining\\hg\\meineLib\\person.bin.gz");
-        File sentenceFile = new File("c:\\cygwin\\textmining\\hg\\meineLib\\EnglishSD.bin.gz");
-        File tokenFile = new File("c:\\cygwin\\textmining\\hg\\meineLib\\EnglishTok.bin.gz");
+        File personFile = new File(".\\meineLib\\person.bin.gz");
+        File sentenceFile = new File(".\\meineLib\\EnglishSD.bin.gz");
+        File tokenFile = new File(".\\meineLib\\EnglishTok.bin.gz");
         try {
             BinaryGISModelReader reader = new BinaryGISModelReader(personFile);
             m = reader.getModel();

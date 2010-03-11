@@ -65,6 +65,10 @@ public class SimpleRegexp extends NER
                  patterns.put("city",
                  "\\b(Rome|Paris|Larissa|Medina|Salonica|Petrograd|Mecca|Athens)\\b"
                  );
+                 patterns.put("date",
+                         "(?i?s?u)((\\w+?day|\\w+?uary|march|april|may|june|july|august|\\w+?mber|\\w+?ober)\\b.+?(?:[.,] ?m[.,]?|oon))"
+                 );
+                         
     }
     
     /**
