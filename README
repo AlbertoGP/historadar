@@ -1,0 +1,28 @@
+2010-03-11
+
+This jar file contains files from the following libraries:
+--------------------------------------------------------------------
+OpenNLP Maxent:
+  Website: http://maxent.sourceforge.net/
+  License: Apache License V2.0,
+           GNU Library or Lesser General Public License (LGPL)
+  Files:
+  - maxent-2.4.0.jar
+--------------------------------------------------------------------
+OpenNLP Tools and models:
+  Website: http://opennlp.sourceforge.net/
+  License: Apache License V2.0,
+           GNU Library or Lesser General Public License (LGPL)
+  Files:
+  - opennlp-tools-1.4.3.jar
+  - trove.jar (from http://trove4j.sourceforge.net/)
+  - models/date.bin.gz
+  - models/location.bin.gz
+  - models/percentage.bin.gz
+  - models/EnglishSD.bin.gz
+  - models/money.bin.gz
+  - models/person.bin.gz
+  - models/EnglishTok.bin.gz
+  - models/organization.bin.gz
+  - models/time.bin.gz
+--------------------------------------------------------------------
