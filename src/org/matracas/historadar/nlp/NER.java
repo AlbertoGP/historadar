@@ -35,6 +35,7 @@ import opennlp.maxent.GISModel;
 import opennlp.maxent.io.BinaryGISModelReader;
 import opennlp.tools.util.Span;
 import java.io.*;
+import java.util.zip.GZIPInputStream;
 
 /**
  * Named entities extracted from a document.
@@ -80,10 +81,12 @@ public class NER
         
         // TODO: extract entities form plain text
         GISModel m;
-        File personFile   = new File("lib/opennlp/models/person.bin.gz");
-        File sentenceFile = new File("lib/opennlp/models/EnglishSD.bin.gz");
-        File tokenFile    = new File("lib/opennlp/models/EnglishTok.bin.gz");
+        DataInputStream personFile, sentenceFile, tokenFile;
         try {
+            personFile   = new DataInputStream(new GZIPInputStream(getClass().getResourceAsStream("/lib/opennlp/models/person.bin.gz")));
+            sentenceFile = new DataInputStream(new GZIPInputStream(getClass().getResourceAsStream("/lib/opennlp/models/EnglishSD.bin.gz")));
+            tokenFile    = new DataInputStream(new GZIPInputStream(getClass().getResourceAsStream("/lib/opennlp/models/EnglishTok.bin.gz")));
+            
             BinaryGISModelReader reader = new BinaryGISModelReader(personFile);
             m = reader.getModel();
             NameFinderME finder = new NameFinderME(m);
