@@ -1,1 +1,2 @@
 Main-Class: org.matracas.historadar.View
+Class-Path: lib
