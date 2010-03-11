@@ -24,9 +24,6 @@ package org.matracas.historadar.nlp;
 
 import java.sql.Time;
 import java.text.DateFormat;
-import java.util.Map;
-import java.util.Hashtable;
-import java.util.Vector;
 import org.matracas.historadar.Document;
 
 import java.util.regex.Matcher;
@@ -70,8 +67,8 @@ public class Metadata
      * For example, to print all the "date" entries:
      * <pre>
      * Metadata metadata = new Metadata(documents);
-     * Metadata.Entries entries = metadata.getMetadata(document);
-     * Metadata.Values values;
+     * Document.Metadata entries = metadata.getMetadata(document);
+     * Document.Values values;
      * values = entries.get(Metadata.date);
      * if (values != null) {
      *     Iterator valueIterator = values.iterator();
@@ -84,9 +81,9 @@ public class Metadata
      * @param document from which to extract the metadata
      * @return entries indexed by type
      */
-    public Entries getMetadata(Document document)
+    public Document.Metadata getMetadata(Document document)
     {
-        Entries entries = new Entries();
+        Document.Metadata entries = new Document.Metadata();
         String plainText = document.getPlainText();
                 
         String monthString = "";
@@ -254,33 +251,4 @@ public class Metadata
 	    return entries;
     }
     
-    public class Values extends Vector<String>
-    {
-    }
-    
-    /**
-     * Collection of string entities indexed by class.
-     */
-    public class Entries extends Hashtable<String, Values>
-    {
-        /**
-         * Add an entity of the given class to the collection.
-         *
-         * @param entryClass class for the entity
-         * @param value the entity as a string
-         * @return the collection so that we can chain calls to this function
-         *         like entries.add("class1","value1").add("class2","value2)...
-         */
-        public Entries add(String entryClass, String value)
-        {
-            Values values = get(entryClass);
-            if (null == values) {
-                put(entryClass, values = new Values());
-            }
-            values.add(value);
-            
-            return this;
-        }
-        
-    }
 }
