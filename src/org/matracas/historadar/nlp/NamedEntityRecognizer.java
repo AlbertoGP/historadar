@@ -59,10 +59,8 @@ public class NamedEntityRecognizer {
 	public ArrayList<String> getAllAttendanceBlocks(Document.Collection documentCollection){
 		ArrayList<String> allAttendanceParts = new ArrayList<String>();
 		
-		Iterator<Document> documentIterator = documentCollection.getDocumentIterator();
-		
-		while (documentIterator.hasNext()) {
-			allAttendanceParts.add(getAttendanceBlock(documentIterator.next()));
+		for (Document document : documentCollection) {
+			allAttendanceParts.add(getAttendanceBlock(document));
 		}
 		
 		return allAttendanceParts;
