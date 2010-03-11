@@ -44,6 +44,7 @@
         <include name="**/*.jar"/>
       </zipgroupfileset>
     </jar>
+    <sleep seconds="1"/>
     <jar jarfile="${dist}/lib/historadar-${DSTAMP}.jar" manifest="Manifest.txt">
       <fileset dir="${build}" includes="**/*.*"/>
       <fileset dir=".">
