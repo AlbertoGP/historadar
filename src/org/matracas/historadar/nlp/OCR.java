@@ -73,11 +73,29 @@ public class OCR
         correctionCount += matcher.groupCount();
         
         // Separate words with capital letters in them.
-        pattern = Pattern.compile("([a-z])([A-Z][a-z])");
+        pattern = Pattern.compile("([a-z])([A-Z0-9][a-z0-9]*?)");
         matcher = pattern.matcher(correctedText);
         correctedText = matcher.replaceAll("$1 $2");
         correctionCount += matcher.groupCount();
-                
+        
+        // Separate ("prefix"-)numbers from words.
+        pattern = Pattern.compile("(\\b\\d)([A-Za-z]{2,}?)");
+        matcher = pattern.matcher(correctedText);
+        correctedText = matcher.replaceAll("$1 $2");
+        correctionCount += matcher.groupCount();
+        
+        // Spaces within abbreviations
+        pattern = Pattern.compile("\\b([A-Z])\\s[.]\\s");
+        matcher = pattern.matcher(correctedText);
+        correctedText = matcher.replaceAll("$1.");
+        correctionCount += matcher.groupCount();
+
+        // Separate (compound) abbreviations from following words
+        pattern = Pattern.compile("[.](\\w)(?![.])");
+        matcher = pattern.matcher(correctedText);
+        correctedText = matcher.replaceAll(". $1");
+        correctionCount += matcher.groupCount();
+
         document.setPlainText(correctedText);
         return correctionCount;
     }
