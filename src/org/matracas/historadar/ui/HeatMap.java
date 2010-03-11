@@ -23,8 +23,11 @@
 package org.matracas.historadar.ui;
 
 import javax.swing.JPanel;
-import javax.swing.JButton;
-import java.awt.*;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.image.BufferedImage;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import javax.swing.event.MouseInputListener;
@@ -36,24 +39,61 @@ import java.util.Vector;
 public class HeatMap extends JPanel
     implements MouseInputListener, MouseWheelListener
 {
-    Vector<ActionListener> actionListeners;
-    String actionCommand;
+    protected Vector<ActionListener> actionListeners;
+    protected String actionCommand;
+    protected int dataWidth, dataHeight;
+    protected BufferedImage image;
     
     public HeatMap()
     {
+        image = null;
+        dataWidth  = 0;
+        dataHeight = 0;
         actionListeners = new Vector<ActionListener>();
         actionCommand = "heatmap";
-        setMinimumSize(new Dimension(200,200));
-        this.addMouseListener(this);
-        this.addMouseMotionListener(this);
-        this.addMouseWheelListener(this);
+        addMouseListener(this);
+        addMouseMotionListener(this);
+        addMouseWheelListener(this);
     }
     
-    public void paint(Graphics g)
+    public void setDataSize(int width, int height)
+    {
+        dataWidth  = width;
+        dataHeight = height;
+        if (dataWidth  < 0) dataWidth  = 1;
+        if (dataHeight < 0) dataHeight = 1;
+        image = new BufferedImage(dataWidth, dataHeight,
+                                  BufferedImage.TYPE_INT_RGB);
+        
+        if (width  < 100) width  = 100;
+        if (height < 100) height = 100;
+        setSize(width, height);
+        setMinimumSize(new Dimension(width, height));
+    }
+    
+    public Dimension getPreferredSize()
+    {
+        return new Dimension(dataWidth * 2, dataHeight * 2);
+    }
+    
+    public void setRow(int row, double[] values)
+    {
+        if (row < 0 || row >= dataHeight) return;
+        
+        int end = values.length;
+        if (end > dataWidth) end = dataWidth;
+        
+        for (int i = 0; i < end; ++i) {
+            image.setRGB(i, row, ((int) (values[i] * 255.0)) << 8);
+        }
+    }
+    
+    public void paintComponent(Graphics g)
     {
         Graphics2D g2 = (Graphics2D) g;
         g2.setColor(Color.RED);
-        g2.fillRect(0, 0, getWidth(), getHeight());
+        //g2.fillRect(0, 0, getWidth(), getHeight());
+        if (image != null) g.drawImage(image, 0, 0, getWidth(), getHeight(), null);
     }
     
     public void addActionListener(ActionListener listener)
