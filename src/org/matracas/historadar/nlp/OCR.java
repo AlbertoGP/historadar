@@ -38,7 +38,10 @@ public class OCR
     public OCR(Document.Collection collection)
     {
         this.collection = collection;
-        // TODO: as test linguistic analysis of the collection to help identify and correct the OCR errors
+        /* Since the method "correctDocument" is called for each document from the document class,
+         * no further action with the hole document collection necessary.
+         * View -> ShowDocument -> annotateDocument();
+         */
     }
     
     /**
@@ -49,7 +52,7 @@ public class OCR
      */
     public int correctDocument(Document document)
     {
-        int correctionCount;
+        int correctionCount = 0;
         String text, correctedText;
         text = document.getPlainText();
         
@@ -67,25 +70,14 @@ public class OCR
         pattern = Pattern.compile("(\\b\\S)\\b\\s\\b");
         matcher = pattern.matcher(text);
         correctedText = matcher.replaceAll("$1");
+        correctionCount += matcher.groupCount();
         
-        /*
-        // Correct 1 9 1 8 to 1918
-        pattern = Pattern.compile("([1-9])[^0-9]?([0-9])[^0-9]?([0-9])[^0-9]?([0-9])");
-        matcher = pattern.matcher(text);
-        correctedText = matcher.replaceAll("$1$2$3$4");
-        
-        // Correct "\d \d" to "\d\d"
-        pattern = Pattern.compile("(\\d)\\D?(\\d)");
+        // Separate words with capital letters in them.
+        pattern = Pattern.compile("([a-z])([A-Z][a-z])");
         matcher = pattern.matcher(correctedText);
-        correctedText = matcher.replaceAll("$1$2");
-        // And once again:
-        pattern = Pattern.compile("(\\d)\\D?(\\d)");
-        matcher = pattern.matcher(correctedText);
-        correctedText = matcher.replaceAll("$1$2");
-        */
-        
-        correctionCount = 0;
-        
+        correctedText = matcher.replaceAll("$1 $2");
+        correctionCount += matcher.groupCount();
+                
         document.setPlainText(correctedText);
         return correctionCount;
     }
