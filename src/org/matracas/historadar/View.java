@@ -26,15 +26,17 @@ import javax.swing.*;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.Color;
-import java.awt.Font;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
-import javax.swing.text.html.HTMLDocument;
 import java.io.File;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.Hashtable;
+import java.util.prefs.Preferences;
 
 import org.matracas.historadar.Document;
-import org.matracas.historadar.ui.HeatMap;
+import org.matracas.historadar.ui.DocumentView;
+import org.matracas.historadar.ui.Radar;
 import org.matracas.historadar.nlp.OCR;
 import org.matracas.historadar.nlp.Metadata;
 import org.matracas.historadar.nlp.NER;
@@ -45,18 +47,23 @@ import org.matracas.historadar.nlp.ner.SimpleRegexp;
  */
 public class View implements ActionListener
 {
+    protected Preferences prefs;
+    
     private JFrame window;
-    private JTextPane documentView;
-    private JTextPane documentSourceView;
-    private HeatMap heatMap;
+    private JSplitPane view;
+    private JPanel documentPane;
     private JPanel metadataPane;
+    private DocumentView documentView;
+    private DocumentView documentSourceView;
+    private Radar radar;
     
     protected Document.Collection documents;
-    protected Document document;
-    Document.SegmentList segments;
+    protected String documentDate;
     
     public View(String[] args)
     {
+        prefs = Preferences.userNodeForPackage(View.class);
+        
         JFrame.setDefaultLookAndFeelDecorated(false);
         window = new JFrame("HistoRadar View");
         window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -64,14 +71,9 @@ public class View implements ActionListener
         buildGUI(window);
         window.setVisible(true);
         
-        document = null;
-        
         if (args.length == 1) {
             loadCollection(new File(args[0]));
-            if (documents != null) {
-                document = documents.getDocument(null);
-            }
-            showDocument();
+            showDocument(null);
         }
         else {
             documents = null;
@@ -80,10 +82,104 @@ public class View implements ActionListener
     
     protected boolean loadCollection(File directory)
     {
-        System.err.println("1");
         documents = new Document.Collection(directory);
         
+        visualizeEntities(documents);
+        
+        System.err.println("----------- " + radar.getMinimumSize().getWidth());
+        view.setDividerLocation(view.getWidth() - view.getDividerSize() - (int) radar.getMinimumSize().getWidth());
+        
         return true;
+    }
+    
+    protected void visualizeEntityTypes(Document.Collection documents)
+    {
+        if (null == documents) return;
+        
+        java.util.Set<String> types = new java.util.TreeSet<String>();
+        java.util.Vector<Map<String, Integer> > typeCounts = new java.util.Vector<Map<String, Integer> >();
+        
+        int maxCount = 0;
+        java.util.Vector<String> documentDates = new java.util.Vector<String>();
+        for (Document document : documents) {
+            Document.SegmentList segments = annotateDocument(document);
+            documentDates.add(documentDate);
+            Map<String, Integer> typeCount = new Hashtable<String, Integer>();
+            for (Document.Segment segment : segments) {
+                String type = segment.get("pattern-name");
+                types.add(type);
+                Integer count = typeCount.get(type);
+                if (null == count) {
+                    count = new Integer(0);
+                }
+                ++count;
+                typeCount.put(type, count);
+                if (count > maxCount) maxCount = count;
+            }
+            typeCounts.add(typeCount);
+        }
+        
+        radar.setDataSize(types.size(), documents.size());
+        
+        int row = 0;
+        double[] counts = new double[types.size()];
+        for (Map<String, Integer> typeCount : typeCounts) {
+            int i = 0;
+            for (String type : types) {
+                Integer count = typeCount.get(type);
+                if (null == count) counts[i] = 0.0;
+                else               counts[i] = ((double) count) / maxCount;
+                ++i;
+            }
+            radar.setRow(documentDates.get(row), row, counts);
+            ++row;
+        }
+        System.err.println("row = " + row);
+    }
+    
+    protected void visualizeEntities(Document.Collection documents)
+    {
+        if (null == documents) return;
+        
+        java.util.Set<String> types = new java.util.TreeSet<String>();
+        java.util.Vector<Map<String, Integer> > typeCounts = new java.util.Vector<Map<String, Integer> >();
+        
+        int maxCount = 0;
+        java.util.Vector<String> documentDates = new java.util.Vector<String>();
+        for (Document document : documents) {
+            Document.SegmentList segments = annotateDocument(document);
+            documentDates.add(documentDate);
+            Map<String, Integer> typeCount = new Hashtable<String, Integer>();
+            for (Document.Segment segment : segments) {
+                String type = document.getPlainText(segment);
+                types.add(type);
+                Integer count = typeCount.get(type);
+                if (null == count) {
+                    count = new Integer(0);
+                }
+                ++count;
+                typeCount.put(type, count);
+                if (count > maxCount) maxCount = count;
+            }
+            typeCounts.add(typeCount);
+        }
+        
+        radar.setDataSize(types.size(), documents.size());
+        
+        int row = 0;
+        double[] counts = new double[types.size()];
+        for (Map<String, Integer> typeCount : typeCounts) {
+            int i = 0;
+            for (String type : types) {
+                Integer count = typeCount.get(type);
+                if (null == count) counts[i] = 0.0;
+                else               counts[i] = ((double) count) / maxCount;
+                ++i;
+            }
+            radar.setRow(documentDates.get(row), row, counts);
+            ++row;
+        }
+        System.err.println("row = " + row + ", documents.size() = " + documents.size() + ", documentDates.size() = " + documentDates.size());
     }
     
     public void actionPerformed(ActionEvent e)
@@ -99,14 +195,13 @@ public class View implements ActionListener
         }
         else if ("load-collection".equals(command)) {
             if (null == documents) {
-                String lastCollectionLoaded = System.getProperty("historadar.defaultCollection");
-                if (null == lastCollectionLoaded) lastCollectionLoaded = ".";
+                String lastCollectionLoaded = prefs.get("defaultCollection", ".");
                 JFileChooser fileChooser = new JFileChooser(lastCollectionLoaded);
                 fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
                 int returnValue = fileChooser.showOpenDialog(window);
                 if (JFileChooser.APPROVE_OPTION == returnValue) {
                     File directory = fileChooser.getSelectedFile();
-                        System.setProperty("historadar.defaultCollection", directory.getAbsolutePath());
+                    prefs.put("defaultCollection", directory.getAbsolutePath());
                     loadCollection(directory);
                 }
                 else {
@@ -114,7 +209,7 @@ public class View implements ActionListener
                 }
             }
             
-            if (documents != null) showDocument();
+            if (documents != null) showDocument(null);
         }
         else {
             System.err.println("Error: Unexpected command: '" + command + "'");
@@ -122,12 +217,11 @@ public class View implements ActionListener
         }
     }
     
-    protected void annotateDocument()
+    protected Document.SegmentList annotateDocument(Document document)
     {
-        if (null == document) {
-            System.err.println("annotateDocument(): document is null");
-            return;
-        }
+        if (null == document) return null;
+        
+        System.err.println("Processing document " + document.getIdentifier());
         
         // OCR correction
         System.err.println("Correcting OCR...");
@@ -138,45 +232,55 @@ public class View implements ActionListener
         // Metadata extraction
         System.err.println("Extracting metadata...");
         Metadata metadata = new Metadata(documents);
-        Metadata.Entries entries = metadata.getMetadata(document);
-        Metadata.Values values;
+        Document.Metadata entries = metadata.getMetadata(document);
+        Document.Metadata.Values values;
         metadataPane.removeAll();
         values = entries.get(Metadata.title);
         if (values != null) {
             Iterator valueIterator = values.iterator();
             while (valueIterator.hasNext()) {
-                metadataPane.add(new JLabel("Title: " + valueIterator.next()));
+                metadataPane.add(label("Title: " + valueIterator.next()));
             }
         }
         values = entries.get(Metadata.date);
         if (values != null) {
-            Iterator valueIterator = values.iterator();
+            Iterator<String> valueIterator = values.iterator();
             while (valueIterator.hasNext()) {
-                metadataPane.add(new JLabel("Date: " + valueIterator.next()));
+                documentDate = valueIterator.next();
+                metadataPane.add(label("Date: " + documentDate));
             }
         }
-        metadataPane.add(new JLabel("Identifier: " + document.getIdentifier()));
+        metadataPane.add(label("Identifier: " + document.getIdentifier()));
         
         System.err.println("Tagging text...");
+        Document.SegmentList segments;
         NER tagger = new SimpleRegexp(documents);
         segments = tagger.getEntities(document);
+        
+        return segments;
     }
     
-    protected void showDocument()
+    protected JTextField label(String text)
     {
+        JTextField label = new JTextField(text);
+        label.setEditable(false);
+        //label.setBorder(null);
+        return label;
+    }
+    
+    protected void showDocument(Document document)
+    {
+        if (null == document && documents != null) {
+            document = documents.getDocument(null);
+        }
+        
         if (document == null) return;
         
-        annotateDocument();
+        Document.SegmentList segments = annotateDocument(document);
         
-        String content;
         
-        content = document.getXMLString(segments, document.getXMLVocabulary("html"));
-        documentView.setText(content);
-        ((HTMLDocument) documentView.getDocument()).getStyleSheet()
-            .addRule("span { background:#FFAAAA; }");
-        
-        content = document.getXMLString(segments);
-        documentSourceView.setText(content);
+        documentView.setText(document, segments);
+        documentSourceView.setText(document, segments);
         
         System.err.println("Text set");
         
@@ -185,36 +289,33 @@ public class View implements ActionListener
     
     private void buildGUI(JFrame frame)
     {
-        documentView = new JTextPane();
+        documentView = new DocumentView();
         documentView.setEditable(false);
         documentView.setContentType("text/html");
         
-        documentSourceView = new JTextPane();
+        documentSourceView = new DocumentView();
         documentSourceView.setEditable(false);
         documentSourceView.setContentType("text/plain");
         
-        heatMap = new HeatMap();
-        heatMap.addActionListener(this);
-        heatMap.setActionCommand("heat-map-click");
+        radar = new Radar();
+        radar.addActionListener(this);
+        radar.setActionCommand("radar-click");
         
         metadataPane = new JPanel();
-        JPanel documentPane;
-        JScrollPane heatMapPane;
         documentPane = new JPanel();
-        heatMapPane = new JScrollPane(heatMap);
         
         documentPane.setLayout(new BoxLayout(documentPane, BoxLayout.PAGE_AXIS));
         metadataPane.setLayout(new BoxLayout(metadataPane, BoxLayout.PAGE_AXIS));
         documentPane.add(metadataPane);
         
         JTabbedPane tabbedDocumentView = new JTabbedPane();
-        tabbedDocumentView.addTab("Source", null, new JScrollPane(documentSourceView), "XML source of the annotated document");
         tabbedDocumentView.addTab("Document", null, new JScrollPane(documentView), "The annotated document");
+        tabbedDocumentView.addTab("Source", null, new JScrollPane(documentSourceView), "XML source of the annotated document");
         documentPane.add(tabbedDocumentView);
         
-        JSplitPane view = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, documentPane, heatMapPane);
+        view = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, documentPane, new JScrollPane(radar));
         view.setOneTouchExpandable(true);
-        view.setResizeWeight(0.8);
+        view.setResizeWeight(0.0);
         
         frame.getContentPane().add(view);
         

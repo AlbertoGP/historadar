@@ -27,73 +27,78 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.image.BufferedImage;
+import java.awt.Font;
 import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
 import javax.swing.event.MouseInputListener;
-import java.awt.event.MouseWheelListener;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseWheelEvent;
+import java.util.Date;
+import java.util.Calendar;
 import java.util.Vector;
 
-public class HeatMap extends JPanel
-    implements MouseInputListener, MouseWheelListener
+public class TimeScale extends JPanel
+    implements MouseInputListener
 {
     protected Vector<ActionListener> actionListeners;
     protected String actionCommand;
-    protected int dataWidth, dataHeight;
-    protected BufferedImage image;
+    protected Vector<Date> dates;
+    protected Date begin, end;
+    protected Calendar calendar;
+    protected int fontSize;
+    protected String fontFamily;
     
-    public HeatMap()
+    public TimeScale()
     {
-        image = null;
-        dataWidth  = 0;
-        dataHeight = 0;
         actionListeners = new Vector<ActionListener>();
-        actionCommand = "heatmap";
+        actionCommand = "time-scale";
         addMouseListener(this);
         addMouseMotionListener(this);
-        addMouseWheelListener(this);
-    }
-    
-    public void setDataSize(int width, int height)
-    {
-        dataWidth  = width;
-        dataHeight = height;
-        if (dataWidth  < 0) dataWidth  = 1;
-        if (dataHeight < 0) dataHeight = 1;
-        image = new BufferedImage(dataWidth, dataHeight,
-                                  BufferedImage.TYPE_INT_RGB);
         
-        if (width  < 100) width  = 100;
-        if (height < 100) height = 100;
-        setSize(width, height);
-        setMinimumSize(new Dimension(width, height));
-    }
-    
-    public Dimension getPreferredSize()
-    {
-        return new Dimension(dataWidth * 2, dataHeight * 2);
-    }
-    
-    public void setRow(int row, double[] values)
-    {
-        if (row < 0 || row >= dataHeight) return;
+        dates = new Vector<Date>();
+        begin = null;
+        end   = null;
+        calendar = Calendar.getInstance();
         
-        int end = values.length;
-        if (end > dataWidth) end = dataWidth;
+        Font font = javax.swing.UIManager.getFont("Label.font");
+        fontSize = font.getSize();
+        fontFamily = font.getFamily();
         
-        for (int i = 0; i < end; ++i) {
-            image.setRGB(i, row, ((int) (values[i] * 255.0)) << 8);
-        }
+        int width = 4 * fontSize;
+        setPreferredSize(new Dimension(40, 100));
+        setMinimumSize(new Dimension(40, 40));
+        setSize(new Dimension(40, 100));
     }
     
     public void paintComponent(Graphics g)
     {
         Graphics2D g2 = (Graphics2D) g;
-        g2.setColor(Color.RED);
         //g2.fillRect(0, 0, getWidth(), getHeight());
-        if (image != null) g.drawImage(image, 0, 0, getWidth(), getHeight(), null);
+        g2.setFont(getFont());
+        g2.setColor(Color.BLACK);
+        int fontOffset = fontSize;
+        int x, y, lastLabelY;
+        x = 0;
+        y = 0;
+        lastLabelY = -fontSize-1;
+        int index = 0;
+        for (Date date : dates) {
+            y = index * getHeight() / dates.size();
+            //g2.setColor(Color.RED);
+            //g2.drawLine(0, y, getWidth(), y);
+            if (y - lastLabelY > fontSize) {
+                calendar.setTime(date);
+                //g2.setColor(Color.BLACK);
+                g2.drawString(String.valueOf(calendar.get(Calendar.YEAR)), 0, y + fontOffset);
+                lastLabelY = y;
+            }
+            ++index;
+        }
+    }
+    
+    public void add(Date date)
+    {
+        if (null == begin) begin = date;
+        if (null == end)   end   = date;
+        dates.add(date);
     }
     
     public void addActionListener(ActionListener listener)
@@ -109,7 +114,7 @@ public class HeatMap extends JPanel
     // MouseInputListener = MouseListener + MouseMotionLister
     public void mouseClicked(MouseEvent e)
     {
-        System.err.println("clicked heat map at " + e.getX() + ", " + e.getY());
+        System.err.println("clicked time scale at " + e.getX() + ", " + e.getY());
     }
     
     // MouseListener
@@ -125,8 +130,5 @@ public class HeatMap extends JPanel
     public void mouseDragged(MouseEvent e) {}
     
     public void mouseMoved(MouseEvent e) {}
-    
-    // MouseWheelListener
-    public void mouseWheelMoved(MouseWheelEvent e) {}
     
 }

@@ -27,6 +27,7 @@ import java.io.FileReader;
 import java.io.BufferedReader;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.Vector;
 import java.util.Iterator;
 import java.util.regex.Pattern;
@@ -132,6 +133,36 @@ public class Document
     }
     
     /**
+     * Collection of string entities indexed by class.
+     */
+    public static class Metadata extends Hashtable<String, Metadata.Values>
+    {
+        public static class Values extends Vector<String>
+        {
+        }
+        
+        /**
+         * Add an entity of the given class to the collection.
+         *
+         * @param entryClass class for the entity
+         * @param value the entity as a string
+         * @return the collection so that we can chain calls to this function
+         *         like entries.add("class1","value1").add("class2","value2)...
+         */
+        public Metadata add(String entryClass, String value)
+        {
+            Values values = get(entryClass);
+            if (null == values) {
+                put(entryClass, values = new Values());
+            }
+            values.add(value);
+            
+            return this;
+        }
+        
+    }
+    
+    /**
      * Attributed document segment. This can be a word, a paragraph, etc.
      * <br/>
      * The segment's attributes can be handled using the {@link Map} interface,
@@ -207,6 +238,22 @@ public class Document
      */
     public static class SegmentList extends Vector<Segment>
     {
+        public SegmentList()
+        {
+        }
+        
+        public SegmentList(String[] tokens, String text)
+        {
+            int begin, end;
+            for (int i = 0; i < tokens.length; ++i) {
+                begin = text.indexOf(tokens[i]);
+                if (begin >= 0) {
+                    end = begin + tokens[i].length();
+                    add(new Segment(begin, end));
+                    text = text.substring(end);
+                }
+            }
+        }
     }
     
     /**
@@ -416,8 +463,19 @@ public class Document
                 }
             }
             
-            if (parentSegment != null) {
+            if (! stack.empty()) parentSegment = stack.peek();
+            while (parentSegment != null) {
                 currentCharacter = format.appendText(parentElement, plainText, currentCharacter, parentSegment.getEnd());
+                
+                if (parentElement.getParentNode() instanceof Element) {
+                    parentElement = (Element) parentElement.getParentNode();
+                    stack.pop();// == parentSegment
+                    if (stack.empty()) parentSegment = null;
+                    else               parentSegment = stack.peek();
+                }
+                else {
+                    System.err.println("Error: parent element can not be the document");
+                }
             }
             
             // Text after the last segment:
@@ -584,7 +642,7 @@ public class Document
     /**
      * Document collection. Most analysis techniques work better when applying them to collections of documents than to isolated texts.
      */
-    public static class Collection
+    public static class Collection implements java.lang.Iterable<Document>
     {
         private Map<String, Document> documents;
         
@@ -599,25 +657,9 @@ public class Document
         {
             documents = new HashMap<String, Document>();
             
-            if (!directory.exists()) {
-                System.err.println("The directory '" + directory.getAbsolutePath() + "' does not exist.");
-                return;
-            }
             Document document;
             String identifier;
-            File[] files;
-            if (directory.isFile()) {
-                files = new File[1];
-                files[0] = directory;
-            }
-            else if (directory.isDirectory()) {
-                files = directory.listFiles();
-            }
-            else {
-                System.err.println("Not a directory or file: '" + directory.getAbsolutePath());
-                return;
-            }
-            
+            File[] files = directory.listFiles();
             for (int i = 0; i < files.length; ++i) {
                 System.err.println("Loading file " + i + " of " + files.length + ": " + files[i].getName());
                 document = null;
@@ -627,7 +669,7 @@ public class Document
                     }
                 }
                 catch (java.io.FileNotFoundException e) {
-                    System.err.println("File not found: " + files[i].getAbsolutePath());
+                    System.err.println("File not found: " + files[i].getName());
                 }
                 
                 if (document != null) {
@@ -637,12 +679,17 @@ public class Document
             }
         }
         
+        public int size()
+        {
+            return documents.size();
+        }
+        
         /**
          * Get an iterator for all documents in the collection.
          *
          * @return iterator for the documents
          */
-        public Iterator<Document> getDocumentIterator()
+        public Iterator<Document> iterator()
         {
             return documents.values().iterator();
         }
@@ -652,7 +699,7 @@ public class Document
          *
          * @return iterator for the identifiers
          */
-        public Iterator<String> getDocumentIdentifierIterator()
+        public Iterator<String> identifierIterator()
         {
             return documents.keySet().iterator();
         }
@@ -668,7 +715,7 @@ public class Document
         {
             if (null == identifier) {
                 if (documents.isEmpty()) return null;
-                else                   return getDocumentIterator().next();
+                else                     return iterator().next();
             }
             
             return documents.get(identifier);

@@ -23,77 +23,69 @@
 package org.matracas.historadar.ui;
 
 import javax.swing.JPanel;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.Color;
+import javax.swing.JLabel;
+import javax.swing.ListSelectionModel;
+import java.awt.BorderLayout;
 import java.awt.Dimension;
-import java.awt.image.BufferedImage;
+import java.awt.geom.Dimension2D;
 import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
 import javax.swing.event.MouseInputListener;
 import java.awt.event.MouseWheelListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.util.Vector;
 
-public class HeatMap extends JPanel
+public class Radar extends JPanel
     implements MouseInputListener, MouseWheelListener
 {
     protected Vector<ActionListener> actionListeners;
     protected String actionCommand;
-    protected int dataWidth, dataHeight;
-    protected BufferedImage image;
+    protected HeatMap heatMap;
     
-    public HeatMap()
+    protected TimeScale timeScale;
+    protected JLabel entityLabel;
+    protected java.text.SimpleDateFormat dateFormat;
+    
+    public Radar()
     {
-        image = null;
-        dataWidth  = 0;
-        dataHeight = 0;
         actionListeners = new Vector<ActionListener>();
-        actionCommand = "heatmap";
+        actionCommand = "radar";
         addMouseListener(this);
         addMouseMotionListener(this);
         addMouseWheelListener(this);
+        setLayout(new BorderLayout());
+        
+        heatMap = new HeatMap();
+        add(heatMap, BorderLayout.CENTER);
+        
+        timeScale = new TimeScale();
+        add(timeScale, BorderLayout.WEST);
+        entityLabel = new JLabel("TODO: show current entity");
+        add(entityLabel, BorderLayout.NORTH);
+        
+        dateFormat = (java.text.SimpleDateFormat) java.text.SimpleDateFormat.getDateInstance();
+        dateFormat.applyPattern("yyyy-MM-dd HH:mm");
+        dateFormat.setLenient(true);
     }
     
     public void setDataSize(int width, int height)
     {
-        dataWidth  = width;
-        dataHeight = height;
-        if (dataWidth  < 0) dataWidth  = 1;
-        if (dataHeight < 0) dataHeight = 1;
-        image = new BufferedImage(dataWidth, dataHeight,
-                                  BufferedImage.TYPE_INT_RGB);
-        
-        if (width  < 100) width  = 100;
-        if (height < 100) height = 100;
-        setSize(width, height);
-        setMinimumSize(new Dimension(width, height));
+        heatMap.setDataSize(width, height);
+        validate();
     }
     
-    public Dimension getPreferredSize()
+    public void setRow(String date, int row, double[] values)
     {
-        return new Dimension(dataWidth * 2, dataHeight * 2);
-    }
-    
-    public void setRow(int row, double[] values)
-    {
-        if (row < 0 || row >= dataHeight) return;
-        
-        int end = values.length;
-        if (end > dataWidth) end = dataWidth;
-        
-        for (int i = 0; i < end; ++i) {
-            image.setRGB(i, row, ((int) (values[i] * 255.0)) << 8);
+        try {
+            if (date != null) timeScale.add(dateFormat.parse(date));
+            else              timeScale.add(new java.util.Date());
         }
-    }
-    
-    public void paintComponent(Graphics g)
-    {
-        Graphics2D g2 = (Graphics2D) g;
-        g2.setColor(Color.RED);
-        //g2.fillRect(0, 0, getWidth(), getHeight());
-        if (image != null) g.drawImage(image, 0, 0, getWidth(), getHeight(), null);
+        catch (java.text.ParseException e) {
+            System.err.println("Error when parsing date '" + date + "'\n" + e);
+            timeScale.add(new java.util.Date());
+        }
+        heatMap.setRow(row, values);
+        validate();
     }
     
     public void addActionListener(ActionListener listener)
@@ -109,7 +101,7 @@ public class HeatMap extends JPanel
     // MouseInputListener = MouseListener + MouseMotionLister
     public void mouseClicked(MouseEvent e)
     {
-        System.err.println("clicked heat map at " + e.getX() + ", " + e.getY());
+        System.err.println("clicked radar at " + e.getX() + ", " + e.getY());
     }
     
     // MouseListener
