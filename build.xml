@@ -18,7 +18,7 @@
   <target name="compile" depends="init"
           description="compile the source " >
     <!-- Compile the java code from ${src} into ${build} -->
-    <javac debug="on" srcdir="${src}" destdir="${build}" encoding="UTF-8" classpath="lib/opennlp/opennlp-tools-1.4.3.jar:lib/opennlp/maxent-2.4.0.jar:lib/opennlp/trove.jar"/>
+    <javac debug="on" srcdir="${src}" destdir="${build}" encoding="UTF-8" classpath="lib/opennlp/opennlp-tools-1.4.3.jar:lib/opennlp/maxent-2.4.0.jar:lib/opennlp/trove.jar:lib/StanfordNER/stanford-ner.jar"/>
   </target>
   
   <target name="dist" depends="compile"

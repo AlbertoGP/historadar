@@ -112,15 +112,8 @@ public class NER
 //                    System.out.print(" " + position + " " + s.getStart() + " " + s.getEnd());
 //                    System.out.println("");
                     
-                    int start = position;
-                    int end = position;
-                    for(int i=0;i<s.getStart()-1;i++) {
-                        start = start + tokens[i].length()+1;
-                    }
-                    for(int i=0;i<s.getEnd();i++) {
-                        end = end + tokens[i].length()+1;
-                    }
-                    Segment segment = new Segment(start,end);
+
+                    Segment segment = createSegment(s,tokens,plainText,position);
                     segment.put("pattern-name", "person");
                     segments.add(segment);
                 }
@@ -169,5 +162,48 @@ public class NER
             
             return this;
         }
+    }
+
+    private Document.Segment createSegment(Span span,String[] tokens,String plainText,int position) {
+        /* get a rough estimation of where the segment should start and end, using the
+         * numbers of letters in the tokens */
+        int start = position;
+        int end = position;
+        for(int i=0;i<span.getStart()-1;i++) {
+            start = start + tokens[i].length()+1;
+        }
+        for(int i=0;i<span.getEnd();i++) {
+            end = end + tokens[i].length()+1;
+        }
+        Document.Segment guessedSegment = new Document.Segment(start, end);
+
+        /*get the NE from the list of tokens*/
+        String NE = "";
+        for (int i=span.getStart();i<span.getEnd();i++) {
+            NE = NE + (tokens[i]);
+        }
+
+        /*try moving the segment around in the text, until it matches the NE*/
+        for (start=guessedSegment.getBegin()+10;start>guessedSegment.getBegin()-10;start--) {
+            for (end=start;end<start+NE.length()+10;end++) {
+
+                /*get the text in the estimated segment (without whitespaces)*/
+                String segmentText = plainText.substring(start, end);
+                int length = segmentText.length(); //remember the length before whitespaces are removed
+                segmentText = segmentText.replaceAll(" ", "");
+
+                /*compare text from the segment to NE. If they match, find end and return segment*/               
+                if (segmentText.equals(NE)) {
+                    end = start + length;
+                    System.out.println("match: " + segmentText);
+                    return new Document.Segment(start, end);
+                }
+            }
+        }
+        
+        /* if we don't get an exact match, just return the guess*/
+
+        System.out.println("no match: " + NE);
+        return guessedSegment;
     }
 }
