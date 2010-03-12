@@ -25,6 +25,7 @@ package org.matracas.historadar.nlp;
 import java.util.Map;
 import java.util.Hashtable;
 import java.util.Vector;
+import java.util.Collections;
 import org.matracas.historadar.Document;
 
 import org.matracas.historadar.Document.Segment;
@@ -80,13 +81,18 @@ public class NER
         
         // TODO: extract entities form plain text
         GISModel m;
+        File locationFile = new File("lib/opennlp/models/location.bin.gz");
         File personFile   = new File("lib/opennlp/models/person.bin.gz");
         File sentenceFile = new File("lib/opennlp/models/EnglishSD.bin.gz");
         File tokenFile    = new File("lib/opennlp/models/EnglishTok.bin.gz");
         try {
             BinaryGISModelReader reader = new BinaryGISModelReader(personFile);
             m = reader.getModel();
-            NameFinderME finder = new NameFinderME(m);
+            NameFinderME personFinder = new NameFinderME(m);
+
+            reader = new BinaryGISModelReader(locationFile);
+            m = reader.getModel();
+            NameFinderME locationFinder = new NameFinderME(m);
 
             reader = new BinaryGISModelReader(sentenceFile);
             m = reader.getModel();
@@ -98,25 +104,35 @@ public class NER
             
             String[] sentences = detector.sentDetect(plainText);
             
+
             int position = 0;
           
             for (String sent:sentences) {
                 String[] tokens = tokenizer.tokenize(sent);
-                Span[] spans = finder.find(tokens);
+                Span[] spans = personFinder.find(tokens);
 
                 for (Span s:spans) {
-                 
-//                    for (int i=s.getStart();i<s.getEnd();i++) {
-//                        System.out.print(tokens[i]);
-//                    }
-//                    System.out.print(" " + position + " " + s.getStart() + " " + s.getEnd());
-//                    System.out.println("");
-                    
-
                     Segment segment = createSegment(s,tokens,plainText,position);
                     segment.put("pattern-name", "person");
                     segments.add(segment);
                 }
+
+                position = position + sent.length();
+            }
+
+
+            position = 0;
+
+            for (String sent:sentences) {
+                String[] tokens = tokenizer.tokenize(sent);
+                Span[] spans = locationFinder.find(tokens);
+
+                for (Span s:spans) {
+                    Segment segment = createSegment(s,tokens,plainText,position);
+                    segment.put("pattern-name", "location");
+                    segments.add(segment);
+                }
+
                 position = position + sent.length();
             }
             
@@ -130,8 +146,9 @@ public class NER
             return segments;
         }
 
-        
-        
+
+
+        Collections.sort(segments);
         return segments;
     }
     
