@@ -25,18 +25,8 @@ package org.matracas.historadar.nlp;
 import java.util.Map;
 import java.util.Hashtable;
 import java.util.Vector;
-import java.util.Collections;
 import org.matracas.historadar.Document;
 
-import org.matracas.historadar.Document.Segment;
-import opennlp.tools.namefind.*;
-import opennlp.tools.sentdetect.*;
-import opennlp.tools.tokenize.TokenizerME;
-import opennlp.maxent.GISModel;
-import opennlp.maxent.io.BinaryGISModelReader;
-import opennlp.tools.util.Span;
-import java.io.*;
-import java.util.zip.GZIPInputStream;
 
 /**
  * Named entities extracted from a document.
@@ -81,78 +71,8 @@ public class NER
         String plainText = document.getPlainText();
         
         // TODO: extract entities form plain text
-        GISModel m;
-        DataInputStream personFile, locationFile, sentenceFile, tokenFile;
-        try {
-            personFile   = new DataInputStream(new GZIPInputStream(getClass().getResourceAsStream("/lib/opennlp/models/person.bin.gz")));
-            locationFile   = new DataInputStream(new GZIPInputStream(getClass().getResourceAsStream("/lib/opennlp/models/location.bin.gz")));
-            sentenceFile = new DataInputStream(new GZIPInputStream(getClass().getResourceAsStream("/lib/opennlp/models/EnglishSD.bin.gz")));
-            tokenFile    = new DataInputStream(new GZIPInputStream(getClass().getResourceAsStream("/lib/opennlp/models/EnglishTok.bin.gz")));
-            
-            BinaryGISModelReader reader = new BinaryGISModelReader(personFile);
-            m = reader.getModel();
-            NameFinderME personFinder = new NameFinderME(m);
-
-            reader = new BinaryGISModelReader(locationFile);
-            m = reader.getModel();
-            NameFinderME locationFinder = new NameFinderME(m);
-
-            reader = new BinaryGISModelReader(sentenceFile);
-            m = reader.getModel();
-            SentenceDetectorME detector = new SentenceDetectorME(m);
-            
-            reader = new BinaryGISModelReader(tokenFile);
-            m = reader.getModel();
-            TokenizerME tokenizer = new TokenizerME(m);
-            
-            String[] sentences = detector.sentDetect(plainText);
-            
-
-            int position = 0;
-          
-            for (String sent:sentences) {
-                String[] tokens = tokenizer.tokenize(sent);
-                Span[] spans = personFinder.find(tokens);
-
-                for (Span s:spans) {
-                    Segment segment = createSegment(s,tokens,plainText,position);
-                    segment.put("pattern-name", "person");
-                    segments.add(segment);
-                }
-
-                position = position + sent.length();
-            }
-
-
-            position = 0;
-
-            for (String sent:sentences) {
-                String[] tokens = tokenizer.tokenize(sent);
-                Span[] spans = locationFinder.find(tokens);
-
-                for (Span s:spans) {
-                    Segment segment = createSegment(s,tokens,plainText,position);
-                    segment.put("pattern-name", "location");
-                    segments.add(segment);
-                }
-
-                position = position + sent.length();
-            }
-            
-
-            
-//            System.out.println("Nr of segments found: "+segments.size());
-
-
-        } catch (Exception e) {
-            System.err.println("exception got thrown in NER.getEntities: "+ e);
+        
             return segments;
-        }
-
-
-
-        Collections.sort(segments);
-        return segments;
     }
     
     public class Entities extends Vector<String>
@@ -184,46 +104,5 @@ public class NER
         }
     }
 
-    private Document.Segment createSegment(Span span,String[] tokens,String plainText,int position) {
-        /* get a rough estimation of where the segment should start and end, using the
-         * numbers of letters in the tokens */
-        int start = position;
-        int end = position;
-        for(int i=0;i<span.getStart()-1;i++) {
-            start = start + tokens[i].length()+1;
-        }
-        for(int i=0;i<span.getEnd();i++) {
-            end = end + tokens[i].length()+1;
-        }
-        Document.Segment guessedSegment = new Document.Segment(start, end);
-
-        /*get the NE from the list of tokens*/
-        String NE = "";
-        for (int i=span.getStart();i<span.getEnd();i++) {
-            NE = NE + (tokens[i]);
-        }
-
-        /*try moving the segment around in the text, until it matches the NE*/
-        for (start=guessedSegment.getBegin()+10;start>guessedSegment.getBegin()-10;start--) {
-            for (end=start;end<start+NE.length()+10;end++) {
-
-                /*get the text in the estimated segment (without whitespaces)*/
-                String segmentText = plainText.substring(start, end);
-                int length = segmentText.length(); //remember the length before whitespaces are removed
-                segmentText = segmentText.replaceAll(" ", "");
-
-                /*compare text from the segment to NE. If they match, find end and return segment*/               
-                if (segmentText.equals(NE)) {
-                    end = start + length;
-//                    System.out.println("match: " + segmentText);
-                    return new Document.Segment(start, end);
-                }
-            }
-        }
-        
-        /* if we don't get an exact match, just return the guess*/
-
-//        System.out.println("no match: " + NE);
-        return guessedSegment;
-    }
+    
 }

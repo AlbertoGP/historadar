@@ -28,6 +28,8 @@ import java.util.Vector;
 import org.matracas.historadar.Document;
 import org.matracas.historadar.nlp.NER;
 
+import org.matracas.historadar.nlp.ner.OpenNlpNER;
+
 /**
  * Named entities extracted from a document.
  *
@@ -77,15 +79,24 @@ public class SimpleRegexp extends NER
      *
      * @param document the document where we look for entities
      */
-//    public Document.SegmentList getEntities(Document document)
-//    {
-//        Document.SegmentList segments = new Document.SegmentList();
-//        String plainText = document.getPlainText();
-//
-//        // TODO: extract entities form plain text
-//        segments = document.segment(patterns);
-//
+    public Document.SegmentList getEntities(Document document)
+    {
+        Document.SegmentList segments = new Document.SegmentList();
+        String plainText = document.getPlainText();
+
+        // TODO: extract entities form plain text
+        segments = document.segment(patterns);
+
 //        return segments;
-//    }
+
+        //for now, because I don't want to change anything in View.java, I will go through here to test
+        // OpenNlpNER
+        OpenNlpNER open = new OpenNlpNER();
+        return open.getEntities(document);
+
+//        //same as above for Stanford
+//        StanfordNER stanford = new StanfordNER();
+//        return stanford.getEntities(document);
+    }
     
 }
