@@ -32,29 +32,9 @@ import java.util.regex.Pattern;
 /**
  * Metadata extracted from a document.
  *
- * The metadata entries have the meanings defined by the
- * Dublin Core® Metadata Initiative, described in
- * <a href="http://dublincore.org/documents/dces/">http://dublincore.org/documents/dces/</a>
  */
 public class Metadata
 {
-    private static final String DC_NAMESPACE = "http://purl.org/dc/elements/1.1/";
-    public static final String contributor = DC_NAMESPACE + "contributor";
-    public static final String coverage    = DC_NAMESPACE + "coverage";
-    public static final String creator     = DC_NAMESPACE + "creator";
-    public static final String date        = DC_NAMESPACE + "date";
-    public static final String description = DC_NAMESPACE + "description";
-    public static final String format      = DC_NAMESPACE + "format";
-    public static final String identifier  = DC_NAMESPACE + "identifier";
-    public static final String language    = DC_NAMESPACE + "language";
-    public static final String publisher   = DC_NAMESPACE + "publisher";
-    public static final String relation    = DC_NAMESPACE + "relation";
-    public static final String rights      = DC_NAMESPACE + "rights";
-    public static final String source      = DC_NAMESPACE + "source";
-    public static final String subject     = DC_NAMESPACE + "subject";
-    public static final String title       = DC_NAMESPACE + "title";
-    public static final String type        = DC_NAMESPACE + "type";
-    
     public Metadata(Document.Collection collection)
     {
         // TODO: linguistic analysis of the collection, if necessary
@@ -69,7 +49,7 @@ public class Metadata
      * Metadata metadata = new Metadata(documents);
      * Document.Metadata entries = metadata.getMetadata(document);
      * Document.Values values;
-     * values = entries.get(Metadata.date);
+     * values = entries.get(metadata.date);
      * if (values != null) {
      *     Iterator valueIterator = values.iterator();
      *     while (valueIterator.hasNext()) {
@@ -101,20 +81,20 @@ public class Metadata
 		Integer minute = 0;
 		
 		try {
-	        entries.add(title, "NO TITLE FOUND YET");
+	        entries.add(entries.title, "NO TITLE FOUND YET");
 	        
 	        Pattern pattern = Pattern.compile("held.{1,60}?((\\w+?day|\\w+?uary|march|april|may|june|july|august|\\w+?mber|\\w+?ober)\\b.+?(?:[.,] ?m[.,]?|oon))", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE | Pattern.CANON_EQ); //Thanks to http://www.regular-expressions.info/java.html
 	        Matcher matcher = pattern.matcher(plainText);
 	        if (matcher.find()){
 	        	String plainDate = matcher.group(1);
-	        	entries.add(date, plainDate);
+	        	entries.add(entries.date, plainDate);
 		        
 	        	// Day of week
 	        	pattern = pattern.compile("\\w+day", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.UNICODE_CASE);
 		        matcher = pattern.matcher(plainDate);
 		        if(matcher.find()){
 		            dayOfWeekString = matcher.group(0);
-		            // entries.add(date, dayOfWeekString);
+		            // entries.add(entries.date, dayOfWeekString);
 			    }
 		        
 		        // Month
@@ -122,7 +102,7 @@ public class Metadata
 		        matcher = pattern.matcher(plainDate);
 		        if(matcher.find()){
 		            monthString = matcher.group(0);
-		            // entries.add(date, monthString);
+		            // entries.add(entries.date, monthString);
 				}
 		        
 		        // Year:
@@ -130,7 +110,7 @@ public class Metadata
 		        matcher = pattern.matcher(plainDate);
 		        if(matcher.find()){
 		            yearString = matcher.group(1);
-		            // entries.add(date, yearString);
+		            // entries.add(entries.date, yearString);
 				}
 		        
 		        // Day of month: (digits before or after month)
@@ -143,7 +123,7 @@ public class Metadata
 		        	else {
 		        		dayString = matcher.group(1);
 		        	}
-		            // entries.add(date, dayString);
+		            // entries.add(entries.date, dayString);
 				}
 		        
 		        // Hour and minute
@@ -152,7 +132,7 @@ public class Metadata
 		        if(matcher.find()){
 		            hourString = matcher.group(1);
 		            minuteString = matcher.group(2);
-		            // entries.add(date, hourString + ":" + minuteString);
+		            // entries.add(entries.date, hourString + ":" + minuteString);
 				}
 		        
 		        // Time of day
@@ -168,7 +148,7 @@ public class Metadata
 					} else {
 						dayTimeString = "I have no idea how you can possibly get here.";
 					}
-		            // entries.add(date, dayTimeString);
+		            // entries.add(entries.date, dayTimeString);
 				}
 		        
 		        
@@ -212,11 +192,11 @@ public class Metadata
 				}
 		        
 		        /* Adding time as split meta data */
-		        entries.add(date, String.format("%4d-%02d-%02d %d:%02d (%s)", year, month, day, hour, minute, dayTimeString));
+		        entries.add(entries.date, String.format("%4d-%02d-%02d %d:%02d (%s)", year, month, day, hour, minute, dayTimeString));
 	        }
 		}
 	    catch(Exception e){
-	    	entries.add(date, e.getLocalizedMessage());
+	    	entries.add(entries.date, e.getLocalizedMessage());
 	    	System.out.println(e.getLocalizedMessage());
 	    }
 	    return entries;
