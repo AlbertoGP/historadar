@@ -41,9 +41,15 @@ import org.w3c.dom.Element;
  * Source text document.
  */
 public class Document
+    implements java.lang.Comparable<Document>
 {
     protected String plainText;
     protected String identifier;
+    protected Metadata metadata;
+    
+    protected Document()
+    {
+    }
     
     /**
      * Constructs an empty document.
@@ -54,6 +60,7 @@ public class Document
      */
     public Document(String identifier)
     {
+        metadata = new Metadata();
         this.identifier = identifier;
     }
     
@@ -132,11 +139,48 @@ public class Document
         plainText = text;
     }
     
+    public int compareTo(Document other)
+    {
+        String date, otherDate;
+        Metadata.Values values;
+        
+        values = getMetadata().get(Metadata.date);
+        if (values != null) date = values.lastElement();
+        else                date = "....-..-..";
+        
+        values = other.getMetadata().get(Metadata.date);
+        if (values != null) otherDate = values.lastElement();
+        else                otherDate = "....-..-..";
+        
+        return date.compareTo(otherDate);
+    }
+    
     /**
      * Collection of string entities indexed by class.
+     *
+     * The predefined metadata entries have the meanings defined by the
+     * Dublin Core® Metadata Initiative, described in
+     * <a href="http://dublincore.org/documents/dces/">http://dublincore.org/documents/dces/</a>
      */
     public static class Metadata extends Hashtable<String, Metadata.Values>
     {
+    private static final String DC_NAMESPACE = "http://purl.org/dc/elements/1.1/";
+        public static final String contributor = DC_NAMESPACE + "contributor";
+        public static final String coverage    = DC_NAMESPACE + "coverage";
+        public static final String creator     = DC_NAMESPACE + "creator";
+        public static final String date        = DC_NAMESPACE + "date";
+        public static final String description = DC_NAMESPACE + "description";
+        public static final String format      = DC_NAMESPACE + "format";
+        public static final String identifier  = DC_NAMESPACE + "identifier";
+        public static final String language    = DC_NAMESPACE + "language";
+        public static final String publisher   = DC_NAMESPACE + "publisher";
+        public static final String relation    = DC_NAMESPACE + "relation";
+        public static final String rights      = DC_NAMESPACE + "rights";
+        public static final String source      = DC_NAMESPACE + "source";
+        public static final String subject     = DC_NAMESPACE + "subject";
+        public static final String title       = DC_NAMESPACE + "title";
+        public static final String type        = DC_NAMESPACE + "type";
+        
         public static class Values extends Vector<String>
         {
         }
@@ -159,7 +203,11 @@ public class Document
             
             return this;
         }
-        
+    }
+    
+    public Metadata getMetadata()
+    {
+        return metadata;
     }
     
     /**
@@ -488,11 +536,9 @@ public class Document
     public XMLVocabulary getXMLVocabulary(String name)
     {
         if ("html".equalsIgnoreCase(name) || "xhtml".equalsIgnoreCase(name)) {
-            System.err.println("html");
             return new XMLVocabularyHTML();
         }
         else {
-            System.err.println("xml");
             return new XMLVocabulary();
         }
     }
@@ -642,8 +688,10 @@ public class Document
     /**
      * Document collection. Most analysis techniques work better when applying them to collections of documents than to isolated texts.
      */
-    public static class Collection implements java.lang.Iterable<Document>
+    public static class Collection
+        implements java.lang.Iterable<Document>
     {
+        private java.util.Vector<Document> sortedDocuments;
         private Map<String, Document> documents;
         
         /**
@@ -656,12 +704,13 @@ public class Document
         public Collection(File directory)
         {
             documents = new HashMap<String, Document>();
+            sortedDocuments = null;
             
             Document document;
             String identifier;
             File[] files = directory.listFiles();
             for (int i = 0; i < files.length; ++i) {
-                System.err.println("Loading file " + i + " of " + files.length + ": " + files[i].getName());
+                System.err.println("Loading file " + (i+1) + " of " + files.length + ": " + files[i].getName());
                 document = null;
                 try {
                     if (files[i].getName().endsWith(".txt")) { 
@@ -684,6 +733,22 @@ public class Document
             return documents.size();
         }
         
+        public void sort()
+        {
+            sortedDocuments = new java.util.Vector<Document>();
+            for (Document document : documents.values()) {
+                sortedDocuments.add(document);
+            }
+            java.util.Collections.sort(sortedDocuments);
+        }
+        
+        public Document get(int index)
+        {
+            if (null == sortedDocuments) sort();
+            
+            return sortedDocuments.get(index);
+        }
+        
         /**
          * Get an iterator for all documents in the collection.
          *
@@ -691,7 +756,9 @@ public class Document
          */
         public Iterator<Document> iterator()
         {
-            return documents.values().iterator();
+            if (null == sortedDocuments) sort();
+            
+            return sortedDocuments.iterator();
         }
         
         /**
