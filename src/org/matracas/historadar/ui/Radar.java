@@ -24,19 +24,17 @@ package org.matracas.historadar.ui;
 
 import javax.swing.JPanel;
 import javax.swing.JLabel;
+import javax.swing.JScrollPane;
 import javax.swing.ListSelectionModel;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.geom.Dimension2D;
 import java.awt.event.ActionListener;
-import javax.swing.event.MouseInputListener;
-import java.awt.event.MouseWheelListener;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseWheelEvent;
+import java.awt.event.ActionEvent;
 import java.util.Vector;
 
 public class Radar extends JPanel
-    implements MouseInputListener, MouseWheelListener
+    implements ActionListener
 {
     protected Vector<ActionListener> actionListeners;
     protected String actionCommand;
@@ -44,28 +42,31 @@ public class Radar extends JPanel
     
     protected TimeScale timeScale;
     protected JLabel entityLabel;
-    protected java.text.SimpleDateFormat dateFormat;
     
     public Radar()
     {
         actionListeners = new Vector<ActionListener>();
         actionCommand = "radar";
-        addMouseListener(this);
-        addMouseMotionListener(this);
-        addMouseWheelListener(this);
+        //addMouseListener(this);
+        //addMouseMotionListener(this);
+        //addMouseWheelListener(this);
         setLayout(new BorderLayout());
         
+        JPanel screen = new JPanel();
+        screen.setLayout(new BorderLayout());
+        
         heatMap = new HeatMap();
-        add(heatMap, BorderLayout.CENTER);
+        heatMap.addActionListener(this);
+        heatMap.setActionCommand("heatmap");
+        screen.add(heatMap, BorderLayout.CENTER);
         
         timeScale = new TimeScale();
-        add(timeScale, BorderLayout.WEST);
+        screen.add(timeScale, BorderLayout.WEST);
+        
+        add(new JScrollPane(screen), BorderLayout.CENTER);
+        
         entityLabel = new JLabel("TODO: show current entity");
         add(entityLabel, BorderLayout.NORTH);
-        
-        dateFormat = (java.text.SimpleDateFormat) java.text.SimpleDateFormat.getDateInstance();
-        dateFormat.applyPattern("yyyy-MM-dd HH:mm");
-        dateFormat.setLenient(true);
     }
     
     public void setDataSize(int width, int height)
@@ -76,16 +77,14 @@ public class Radar extends JPanel
     
     public void setRow(String date, int row, double[] values)
     {
-        try {
-            if (date != null) timeScale.add(dateFormat.parse(date));
-            else              timeScale.add(new java.util.Date());
-        }
-        catch (java.text.ParseException e) {
-            System.err.println("Error when parsing date '" + date + "'\n" + e);
-            timeScale.add(new java.util.Date());
-        }
+        timeScale.set(row, date);
         heatMap.setRow(row, values);
         validate();
+    }
+    
+    public void setLabel(String text)
+    {
+        entityLabel.setText(text);
     }
     
     public void addActionListener(ActionListener listener)
@@ -98,27 +97,58 @@ public class Radar extends JPanel
         actionCommand = command;
     }
     
-    // MouseInputListener = MouseListener + MouseMotionLister
-    public void mouseClicked(MouseEvent e)
+    public static class ActionEvent extends java.awt.event.ActionEvent
     {
-        System.err.println("clicked radar at " + e.getX() + ", " + e.getY());
+        public enum Action { SCREEN_CLICK, SCREEN_MOUSEOVER };
+        
+        protected int row, column;
+        protected Action action;
+        
+        public ActionEvent(Object source, int row, int column, String command, Action action)
+        {
+            super(source, ActionEvent.ACTION_PERFORMED, command);
+            this.row    = row;
+            this.column = column;
+            this.action = action;
+        }
+        
+        public int getRow()    { return row;    }
+        public int getColumn() { return column; }
+        public Action getAction() { return action; }
     }
     
-    // MouseListener
-    public void mouseEntered(MouseEvent e) {}
+    protected void dispatch(ActionEvent event)
+    {
+        for (ActionListener listener : actionListeners) {
+            listener.actionPerformed(event);
+        }
+    }
     
-    public void mouseExited(MouseEvent e) {}
-    
-    public void mousePressed(MouseEvent e) {}
-    
-    public void mouseReleased(MouseEvent e) {}
-    
-    // MouseMotionListener
-    public void mouseDragged(MouseEvent e) {}
-    
-    public void mouseMoved(MouseEvent e) {}
-    
-    // MouseWheelListener
-    public void mouseWheelMoved(MouseWheelEvent e) {}
+    // ActionListener
+    public void actionPerformed(java.awt.event.ActionEvent e)
+    {
+        if ("heatmap".equals(e.getActionCommand())) {
+            HeatMap heatmap = (HeatMap) e.getSource();
+            HeatMap.ActionEvent event = (HeatMap.ActionEvent) e;
+            switch (event.getAction()) {
+            case CLICK:
+                dispatch(new ActionEvent(this,
+                                         event.getRow(), event.getColumn(),
+                                         actionCommand,
+                                         ActionEvent.Action.SCREEN_CLICK
+                                         ));
+                break;
+            case MOVE:
+                dispatch(new ActionEvent(this,
+                                         event.getRow(), event.getColumn(),
+                                         actionCommand,
+                                         ActionEvent.Action.SCREEN_MOUSEOVER
+                                         ));
+                break;
+            default:
+                System.err.println("unexpected action in Radar.ActionEvent: " + event.getAction());
+            }
+        }
+    }
     
 }
