@@ -29,7 +29,6 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.image.BufferedImage;
 import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
 import javax.swing.event.MouseInputListener;
 import java.awt.event.MouseWheelListener;
 import java.awt.event.MouseEvent;
@@ -60,20 +59,17 @@ public class HeatMap extends JPanel
     {
         dataWidth  = width;
         dataHeight = height;
-        if (dataWidth  < 0) dataWidth  = 1;
-        if (dataHeight < 0) dataHeight = 1;
+        if (dataWidth  < 1) dataWidth  = 1;
+        if (dataHeight < 1) dataHeight = 1;
         image = new BufferedImage(dataWidth, dataHeight,
                                   BufferedImage.TYPE_INT_RGB);
-        
-        if (width  < 100) width  = 100;
-        if (height < 100) height = 100;
-        setSize(width, height);
-        setMinimumSize(new Dimension(width, height));
+        setSize(dataWidth, dataHeight);
+        setMinimumSize(getSize());
     }
     
     public Dimension getPreferredSize()
     {
-        return new Dimension(dataWidth * 2, dataHeight * 2);
+        return new Dimension(dataWidth * 4, dataHeight * 4);
     }
     
     public void setRow(int row, double[] values)
@@ -96,6 +92,16 @@ public class HeatMap extends JPanel
         if (image != null) g.drawImage(image, 0, 0, getWidth(), getHeight(), null);
     }
     
+    protected int getRow(int y)
+    {
+        return y * dataHeight / getHeight();
+    }
+    
+    protected int getColumn(int x)
+    {
+        return x * dataWidth / getWidth();
+    }
+    
     public void addActionListener(ActionListener listener)
     {
         actionListeners.add(listener);
@@ -106,10 +112,52 @@ public class HeatMap extends JPanel
         actionCommand = command;
     }
     
+    public static class ActionEvent extends java.awt.event.ActionEvent
+    {
+        public enum Action { CLICK, MOVE };
+        
+        protected int row, column;
+        protected Action action;
+        
+        public ActionEvent(Object source, int row, int column, String command, Action action)
+        {
+            super(source, ActionEvent.ACTION_PERFORMED, command);
+            this.row    = row;
+            this.column = column;
+            this.action = action;
+        }
+        
+        public int getRow()    { return row;    }
+        public int getColumn() { return column; }
+        public Action getAction() { return action; }
+    }
+    
+    protected void dispatch(ActionEvent event)
+    {
+        for (ActionListener listener : actionListeners) {
+            listener.actionPerformed(event);
+        }
+    }
+    
     // MouseInputListener = MouseListener + MouseMotionLister
     public void mouseClicked(MouseEvent e)
     {
-        System.err.println("clicked heat map at " + e.getX() + ", " + e.getY());
+        ActionEvent event = new ActionEvent(this,
+                                            getRow(e.getY()),
+                                            getColumn(e.getX()),
+                                            actionCommand,
+                                            ActionEvent.Action.CLICK);
+        dispatch(event);
+    }
+    
+    public void mouseMoved(MouseEvent e)
+    {
+        ActionEvent event = new ActionEvent(this,
+                                            getRow(e.getY()),
+                                            getColumn(e.getX()),
+                                            actionCommand,
+                                            ActionEvent.Action.MOVE);
+        dispatch(event);
     }
     
     // MouseListener
@@ -123,8 +171,6 @@ public class HeatMap extends JPanel
     
     // MouseMotionListener
     public void mouseDragged(MouseEvent e) {}
-    
-    public void mouseMoved(MouseEvent e) {}
     
     // MouseWheelListener
     public void mouseWheelMoved(MouseWheelEvent e) {}

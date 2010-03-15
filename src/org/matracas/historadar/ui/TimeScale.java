@@ -32,7 +32,6 @@ import java.awt.event.ActionListener;
 import javax.swing.event.MouseInputListener;
 import java.awt.event.MouseEvent;
 import java.util.Date;
-import java.util.Calendar;
 import java.util.Vector;
 
 public class TimeScale extends JPanel
@@ -42,9 +41,10 @@ public class TimeScale extends JPanel
     protected String actionCommand;
     protected Vector<Date> dates;
     protected Date begin, end;
-    protected Calendar calendar;
     protected int fontSize;
     protected String fontFamily;
+    protected String dateFormatPattern;
+    protected java.text.SimpleDateFormat dateFormat;
     
     public TimeScale()
     {
@@ -56,22 +56,34 @@ public class TimeScale extends JPanel
         dates = new Vector<Date>();
         begin = null;
         end   = null;
-        calendar = Calendar.getInstance();
+        dateFormatPattern = "yyyy-MM-dd";
+        dateFormat = (java.text.SimpleDateFormat) java.text.SimpleDateFormat.getDateInstance();
+        dateFormat.applyPattern(dateFormatPattern);
+        dateFormat.setLenient(true);
         
         Font font = javax.swing.UIManager.getFont("Label.font");
         fontSize = font.getSize();
         fontFamily = font.getFamily();
         
-        int width = 4 * fontSize;
-        setPreferredSize(new Dimension(40, 100));
-        setMinimumSize(new Dimension(40, 40));
-        setSize(new Dimension(40, 100));
+        adjustSize();
+    }
+    
+    protected void adjustSize()
+    {
+        int width = dateFormatPattern.length() * fontSize * 3 / 4;
+        int height = dates.size() * fontSize;
+        if (height < fontSize) height = fontSize;
+        
+        Dimension size = new Dimension(width, height);
+        setMinimumSize(new Dimension(width, fontSize));
+        setPreferredSize(size);
+        setSize(size);
     }
     
     public void paintComponent(Graphics g)
     {
         Graphics2D g2 = (Graphics2D) g;
-        //g2.fillRect(0, 0, getWidth(), getHeight());
+        g2.clearRect(0, 0, getWidth(), getHeight());
         g2.setFont(getFont());
         g2.setColor(Color.BLACK);
         int fontOffset = fontSize;
@@ -85,9 +97,8 @@ public class TimeScale extends JPanel
             //g2.setColor(Color.RED);
             //g2.drawLine(0, y, getWidth(), y);
             if (y - lastLabelY > fontSize) {
-                calendar.setTime(date);
                 //g2.setColor(Color.BLACK);
-                g2.drawString(String.valueOf(calendar.get(Calendar.YEAR)), 0, y + fontOffset);
+                g2.drawString(dateFormat.format(date), 0, y + fontOffset);
                 lastLabelY = y;
             }
             ++index;
@@ -99,6 +110,38 @@ public class TimeScale extends JPanel
         if (null == begin) begin = date;
         if (null == end)   end   = date;
         dates.add(date);
+        adjustSize();
+    }
+    
+    public void add(String date)
+    {
+        add(parseDate(date));
+    }
+    
+    public void set(int index, String date)
+    {
+        set(index, parseDate(date));
+    }
+    
+    public void set(int index, Date date)
+    {
+        if (null == begin) begin = date;
+        if (null == end)   end   = date;
+        if (dates.size() <= index) dates.setSize(index + 1);
+        dates.set(index, date);
+        adjustSize();
+    }
+    
+    protected Date parseDate(String date)
+    {
+        try {
+            if (date != null) return dateFormat.parse(date);
+        }
+        catch (java.text.ParseException e) {
+            System.err.println("Error when parsing date '" + date + "'\n" + e);
+        }
+        
+        return new java.util.Date();
     }
     
     public void addActionListener(ActionListener listener)
