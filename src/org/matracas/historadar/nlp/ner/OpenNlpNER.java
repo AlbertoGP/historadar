@@ -47,7 +47,7 @@ public class OpenNlpNER extends NER
 {
  
 
-    public OpenNlpNER(/*Document.Collection collection*/)
+    public OpenNlpNER(Document.Collection collection)
     {
     }
 

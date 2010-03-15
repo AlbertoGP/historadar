@@ -28,8 +28,6 @@ import java.util.Vector;
 import org.matracas.historadar.Document;
 import org.matracas.historadar.nlp.NER;
 
-import org.matracas.historadar.nlp.ner.OpenNlpNER;
-
 /**
  * Named entities extracted from a document.
  *
