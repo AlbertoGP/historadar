@@ -40,7 +40,7 @@ public class StanfordNER extends NER
 {
     protected Document.PatternTable patterns;
 
-    public StanfordNER(/*Document.Collection collection*/)
+    public StanfordNER(Document.Collection collection)
     {
     }
 
