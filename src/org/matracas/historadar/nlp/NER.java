@@ -27,12 +27,11 @@ import java.util.Hashtable;
 import java.util.Vector;
 import org.matracas.historadar.Document;
 
-
 /**
  * Named entities extracted from a document.
  *
  */
-public class NER
+public abstract class NER
 {
     protected static final String NAMESPACE = "http://matracas.org/ns/historadar/";
     public static final String location     = NAMESPACE + "location";
@@ -72,7 +71,7 @@ public class NER
         
         // TODO: extract entities form plain text
         
-            return segments;
+        return segments;
     }
     
     public class Entities extends Vector<String>
@@ -103,6 +102,4 @@ public class NER
             return this;
         }
     }
-
-    
 }
