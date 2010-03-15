@@ -26,3 +26,10 @@ OpenNLP Tools and models:
   - models/organization.bin.gz
   - models/time.bin.gz
 --------------------------------------------------------------------
+Stanford Named Entity Recognizer:
+  Website: http://nlp.stanford.edu/software/CRF-NER.shtml
+  License: GNU General Public License (GPL)
+  Files:
+  - stanford-ner.jar
+  - classifiers/ner-eng-ie.crf-3-all2008.ser.gz
+--------------------------------------------------------------------
