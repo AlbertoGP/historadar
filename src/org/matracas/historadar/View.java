@@ -26,6 +26,7 @@ import javax.swing.*;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.Color;
+import java.awt.Cursor;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.io.File;
@@ -41,6 +42,8 @@ import org.matracas.historadar.nlp.OCR;
 import org.matracas.historadar.nlp.Metadata;
 import org.matracas.historadar.nlp.NER;
 import org.matracas.historadar.nlp.ner.SimpleRegexp;
+import org.matracas.historadar.nlp.ner.OpenNlpNER;
+import org.matracas.historadar.nlp.ner.StanfordNER;
 
 /**
  * Main class of HistoRadar, with the GUI application.
@@ -56,9 +59,17 @@ public class View implements ActionListener
     private DocumentView documentView;
     private DocumentView documentSourceView;
     private Radar radar;
+    private JPanel overlay;
+    private JProgressBar progressBar;
     
     protected Document.Collection documents;
+    protected Document currentDocument;
     protected String documentDate;
+    protected Map<String, Document.SegmentList> segmentsInDocuments;
+    
+    protected OCR ocr;
+    protected Metadata metadata;
+    protected NER tagger;
     
     public View(String[] args)
     {
@@ -71,39 +82,72 @@ public class View implements ActionListener
         buildGUI(window);
         window.setVisible(true);
         
+        overlay = new JPanel();
+        overlay.setLayout(new BorderLayout());
+        progressBar = new JProgressBar();
+        overlay.add(progressBar, BorderLayout.CENTER);
+        
+        currentDocument = null;
         if (args.length == 1) {
             loadCollection(new File(args[0]));
-            showDocument(null);
         }
         else {
             documents = null;
         }
+        showDocument();
+    }
+    
+    protected void visualize(Document.Collection documents)
+    {
+        window.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+        
+        visualizeEntities(documents);
+        view.setDividerLocation(view.getWidth() - view.getDividerSize() - (int) radar.getMinimumSize().getWidth());
+        showDocument();
+        
+        window.setCursor(Cursor.getDefaultCursor());
     }
     
     protected boolean loadCollection(File directory)
     {
         documents = new Document.Collection(directory);
+        segmentsInDocuments = null;
         
-        visualizeEntities(documents);
+        ocr      = new OCR(documents);
+        metadata = new Metadata(documents);
+        tagger   = new SimpleRegexp(documents);
         
-        System.err.println("----------- " + radar.getMinimumSize().getWidth());
-        view.setDividerLocation(view.getWidth() - view.getDividerSize() - (int) radar.getMinimumSize().getWidth());
+        visualize(documents);
         
         return true;
+    }
+    
+    protected void processCollection(Document.Collection documents)
+    {
+        segmentsInDocuments = new Hashtable<String, Document.SegmentList>();
+        int progress = 0;
+        for (Document document : documents) {
+            progressBar.setValue(++progress);
+            Document.SegmentList segments = annotateDocument(document);
+            segmentsInDocuments.put(document.getIdentifier(), segments);
+        }
+        documents.sort();
     }
     
     protected void visualizeEntityTypes(Document.Collection documents)
     {
         if (null == documents) return;
         
+        if (null == segmentsInDocuments) processCollection(documents);
+        
         java.util.Set<String> types = new java.util.TreeSet<String>();
         java.util.Vector<Map<String, Integer> > typeCounts = new java.util.Vector<Map<String, Integer> >();
         
         int maxCount = 0;
-        java.util.Vector<String> documentDates = new java.util.Vector<String>();
         for (Document document : documents) {
-            Document.SegmentList segments = annotateDocument(document);
-            documentDates.add(documentDate);
+            Document.SegmentList segments = segmentsInDocuments.get(document.getIdentifier());
+            if (null == segments) segments = annotateDocument(document);
+            
             Map<String, Integer> typeCount = new Hashtable<String, Integer>();
             for (Document.Segment segment : segments) {
                 String type = segment.get("pattern-name");
@@ -121,34 +165,24 @@ public class View implements ActionListener
         
         radar.setDataSize(types.size(), documents.size());
         
-        int row = 0;
-        double[] counts = new double[types.size()];
-        for (Map<String, Integer> typeCount : typeCounts) {
-            int i = 0;
-            for (String type : types) {
-                Integer count = typeCount.get(type);
-                if (null == count) counts[i] = 0.0;
-                else               counts[i] = ((double) count) / maxCount;
-                ++i;
-            }
-            radar.setRow(documentDates.get(row), row, counts);
-            ++row;
-        }
-        System.err.println("row = " + row);
+        setRows(radar, types, typeCounts, maxCount);
     }
     
+    protected java.util.Vector<String> rowLabels, columnLabels;
     protected void visualizeEntities(Document.Collection documents)
     {
         if (null == documents) return;
+        
+        if (null == segmentsInDocuments) processCollection(documents);
         
         java.util.Set<String> types = new java.util.TreeSet<String>();
         java.util.Vector<Map<String, Integer> > typeCounts = new java.util.Vector<Map<String, Integer> >();
         
         int maxCount = 0;
-        java.util.Vector<String> documentDates = new java.util.Vector<String>();
         for (Document document : documents) {
-            Document.SegmentList segments = annotateDocument(document);
-            documentDates.add(documentDate);
+            Document.SegmentList segments = segmentsInDocuments.get(document.getIdentifier());
+            if (null == segments) segments = annotateDocument(document);
+            
             Map<String, Integer> typeCount = new Hashtable<String, Integer>();
             for (Document.Segment segment : segments) {
                 String type = document.getPlainText(segment);
@@ -166,8 +200,18 @@ public class View implements ActionListener
         
         radar.setDataSize(types.size(), documents.size());
         
+        setRows(radar, types, typeCounts, maxCount);
+    }
+    
+    protected void setRows(Radar radar, java.util.Set<String> types, java.util.Vector<Map<String, Integer> > typeCounts, int maxCount)
+    {
+        rowLabels    = new java.util.Vector<String>();
+        columnLabels = new java.util.Vector<String>();
+        columnLabels.addAll(types);
+        
         int row = 0;
         double[] counts = new double[types.size()];
+        Iterator<Document> documentIterator = documents.iterator();
         for (Map<String, Integer> typeCount : typeCounts) {
             int i = 0;
             for (String type : types) {
@@ -176,40 +220,68 @@ public class View implements ActionListener
                 else               counts[i] = ((double) count) / maxCount;
                 ++i;
             }
-            radar.setRow(documentDates.get(row), row, counts);
+            
+            String date;
+            Document.Metadata.Values values;
+            values = documentIterator.next().getMetadata().get(Document.Metadata.date);
+            if (values != null) date = values.lastElement();
+            else                date = "BOGUS";
+            rowLabels.add(date);
+            
+            radar.setRow(date, row, counts);
             ++row;
         }
-        System.err.println("row = " + row + ", documents.size() = " + documents.size() + ", documentDates.size() = " + documentDates.size());
     }
     
     public void actionPerformed(ActionEvent e)
     {
         String command = e.getActionCommand();
-        doCommand(command);
-    }
-    
-    protected void doCommand(String command)
-    {
         if ("quit".equals(command)) {
             System.exit(0);
         }
         else if ("load-collection".equals(command)) {
-            if (null == documents) {
-                String lastCollectionLoaded = prefs.get("defaultCollection", ".");
-                JFileChooser fileChooser = new JFileChooser(lastCollectionLoaded);
-                fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-                int returnValue = fileChooser.showOpenDialog(window);
-                if (JFileChooser.APPROVE_OPTION == returnValue) {
-                    File directory = fileChooser.getSelectedFile();
-                    prefs.put("defaultCollection", directory.getAbsolutePath());
-                    loadCollection(directory);
-                }
-                else {
-                    System.err.println("Collection loading cancelled");
-                }
+            String lastCollectionLoaded = prefs.get("defaultCollection", ".");
+            JFileChooser fileChooser = new JFileChooser(lastCollectionLoaded);
+            fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+            int returnValue = fileChooser.showOpenDialog(window);
+            if (JFileChooser.APPROVE_OPTION == returnValue) {
+                File directory = fileChooser.getSelectedFile();
+                prefs.put("defaultCollection", directory.getAbsolutePath());
+                loadCollection(directory);
+            }
+            else {
+                System.err.println("Collection loading cancelled");
             }
             
-            if (documents != null) showDocument(null);
+            showDocument();
+        }
+        else if ("ner-engine-simple-regexp".equals(command)) {
+            tagger = new SimpleRegexp(documents);
+            segmentsInDocuments = null;
+            visualize(documents);
+        }
+        else if ("ner-engine-opennlp-maxent".equals(command)) {
+            tagger = new OpenNlpNER(documents);
+            segmentsInDocuments = null;
+            visualize(documents);
+        }
+        else if ("ner-engine-stanford".equals(command)) {
+            tagger = new StanfordNER(documents);
+            segmentsInDocuments = null;
+            visualize(documents);
+        }
+        else if ("radar".equals(command)) {
+            Radar.ActionEvent event = (Radar.ActionEvent) e;
+            switch (event.getAction()) {
+            case SCREEN_CLICK:
+                showDocument(documents.get(event.getRow()));
+                break;
+            case SCREEN_MOUSEOVER:
+                radar.setLabel(columnLabels.get(event.getColumn()) + ", " + rowLabels.get(event.getRow()));
+                break;
+            default:
+                System.err.println("unexpected action in Radar.ActionEvent: " + event.getAction());
+            }
         }
         else {
             System.err.println("Error: Unexpected command: '" + command + "'");
@@ -225,36 +297,16 @@ public class View implements ActionListener
         
         // OCR correction
         System.err.println("Correcting OCR...");
-        OCR ocr = new OCR(documents);
         int corrections = ocr.correctDocument(document);
         System.err.println("Corrected " + corrections + " errors from the OCR text");
         
         // Metadata extraction
         System.err.println("Extracting metadata...");
-        Metadata metadata = new Metadata(documents);
         Document.Metadata entries = metadata.getMetadata(document);
-        Document.Metadata.Values values;
-        metadataPane.removeAll();
-        values = entries.get(Metadata.title);
-        if (values != null) {
-            Iterator valueIterator = values.iterator();
-            while (valueIterator.hasNext()) {
-                metadataPane.add(label("Title: " + valueIterator.next()));
-            }
-        }
-        values = entries.get(Metadata.date);
-        if (values != null) {
-            Iterator<String> valueIterator = values.iterator();
-            while (valueIterator.hasNext()) {
-                documentDate = valueIterator.next();
-                metadataPane.add(label("Date: " + documentDate));
-            }
-        }
-        metadataPane.add(label("Identifier: " + document.getIdentifier()));
+        document.getMetadata().putAll(entries);
         
         System.err.println("Tagging text...");
         Document.SegmentList segments;
-        NER tagger = new SimpleRegexp(documents);
         segments = tagger.getEntities(document);
         
         return segments;
@@ -264,8 +316,12 @@ public class View implements ActionListener
     {
         JTextField label = new JTextField(text);
         label.setEditable(false);
-        //label.setBorder(null);
         return label;
+    }
+    
+    protected void showDocument()
+    {
+        showDocument(currentDocument);
     }
     
     protected void showDocument(Document document)
@@ -276,15 +332,42 @@ public class View implements ActionListener
         
         if (document == null) return;
         
-        Document.SegmentList segments = annotateDocument(document);
+        window.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
         
+        Document.Metadata.Values values;
+        metadataPane.removeAll();
+        values = document.getMetadata().get(Document.Metadata.title);
+        if (values != null) {
+            Iterator valueIterator = values.iterator();
+            while (valueIterator.hasNext()) {
+                metadataPane.add(label("Title: " + valueIterator.next()));
+            }
+        }
+        values = document.getMetadata().get(Document.Metadata.date);
+        if (values != null) {
+            Iterator<String> valueIterator = values.iterator();
+            while (valueIterator.hasNext()) {
+                documentDate = valueIterator.next();
+                metadataPane.add(label("Date: " + documentDate));
+            }
+        }
+        metadataPane.add(label("Identifier: " + document.getIdentifier()));
+        
+        Document.SegmentList segments;
+        if (segmentsInDocuments != null) {
+            segments = segmentsInDocuments.get(document.getIdentifier());
+        }
+        else {
+            segments = null;
+        }
+        if (null == segments) segments = annotateDocument(document);
         
         documentView.setText(document, segments);
         documentSourceView.setText(document, segments);
         
-        System.err.println("Text set");
-        
         window.validate();
+        
+        window.setCursor(Cursor.getDefaultCursor());
     }
     
     private void buildGUI(JFrame frame)
@@ -299,7 +382,7 @@ public class View implements ActionListener
         
         radar = new Radar();
         radar.addActionListener(this);
-        radar.setActionCommand("radar-click");
+        radar.setActionCommand("radar");
         
         metadataPane = new JPanel();
         documentPane = new JPanel();
@@ -313,16 +396,18 @@ public class View implements ActionListener
         tabbedDocumentView.addTab("Source", null, new JScrollPane(documentSourceView), "XML source of the annotated document");
         documentPane.add(tabbedDocumentView);
         
-        view = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, documentPane, new JScrollPane(radar));
+        view = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, documentPane, radar);
         view.setOneTouchExpandable(true);
         view.setResizeWeight(0.0);
         
         frame.getContentPane().add(view);
         
         JMenuBar menuBar = new JMenuBar();
-        JMenu menu = new JMenu("File");
-        menuBar.add(menu);
+        JMenu menu, submenu;
         JMenuItem item;
+        ButtonGroup group;
+        
+        menu = new JMenu("File");
         menu.add(item = new JMenuItem("Load collection"));
         item.addActionListener(this);
         item.setActionCommand("load-collection");
@@ -330,6 +415,30 @@ public class View implements ActionListener
         menu.add(item = new JMenuItem("Quit"));
         item.addActionListener(this);
         item.setActionCommand("quit");
+        menuBar.add(menu);
+        
+        menu = new JMenu("NER");
+        menu.setToolTipText("Named Entity Recognition");
+        group = new ButtonGroup();
+        menu.add(item = new JRadioButtonMenuItem("Simple regexp (built-in)"));
+        item.addActionListener(this);
+        item.setActionCommand("ner-engine-simple-regexp");
+        item.setSelected(true);
+        group.add(item);
+        menu.add(item = new JRadioButtonMenuItem("OpenNLP Maxent"));
+        item.addActionListener(this);
+        item.setActionCommand("ner-engine-opennlp-maxent");
+        group.add(item);
+        menu.add(item = new JRadioButtonMenuItem("Stanford NER"));
+        item.addActionListener(this);
+        item.setActionCommand("ner-engine-stanford");
+        group.add(item);
+        menuBar.add(menu);
+        
+        menu = new JMenu("About");
+        menu.add(new JMenuItem("Version 2010-03-15 10:49"));
+        menuBar.add(menu);
+        
         frame.setJMenuBar(menuBar);
     }
     
