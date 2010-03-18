@@ -48,7 +48,8 @@ import org.matracas.historadar.nlp.ner.StanfordNER;
 /**
  * Main class of HistoRadar, with the GUI application.
  */
-public class View implements ActionListener
+public class View
+    implements ActionListener
 {
     protected Preferences prefs;
     
@@ -56,6 +57,7 @@ public class View implements ActionListener
     private JSplitPane view;
     private JPanel documentPane;
     private JPanel metadataPane;
+    private JTextField searchBox;
     private DocumentView documentView;
     private DocumentView documentSourceView;
     private Radar radar;
@@ -102,7 +104,7 @@ public class View implements ActionListener
         window.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
         
         visualizeEntities(documents);
-        view.setDividerLocation(view.getWidth() - view.getDividerSize() - (int) radar.getMinimumSize().getWidth());
+        view.setDividerLocation(view.getWidth() - view.getDividerSize() - (int) radar.getPreferredSize().getWidth());
         showDocument();
         
         window.setCursor(Cursor.getDefaultCursor());
@@ -163,7 +165,7 @@ public class View implements ActionListener
             typeCounts.add(typeCount);
         }
         
-        radar.setDataSize(types.size(), documents.size());
+        radar.setDataSize(documents.size(), types.size());
         
         setRows(radar, types, typeCounts, maxCount);
     }
@@ -198,7 +200,7 @@ public class View implements ActionListener
             typeCounts.add(typeCount);
         }
         
-        radar.setDataSize(types.size(), documents.size());
+        radar.setDataSize(documents.size(), types.size());
         
         setRows(radar, types, typeCounts, maxCount);
     }
@@ -216,8 +218,16 @@ public class View implements ActionListener
             int i = 0;
             for (String type : types) {
                 Integer count = typeCount.get(type);
-                if (null == count) counts[i] = 0.0;
-                else               counts[i] = ((double) count) / maxCount;
+                if (null == count || 0 == count) {
+                    counts[i] = 0.0;
+                }
+                else {
+                    // Map values to luminosity asymptotically towards 1.0,
+                    // to emphasize differences when the number of mentions
+                    // is low, starting with 0.2 for single occurrences
+                    // to make them visible.
+                    counts[i] = (((double) count) - 0.8) / ((double) count);
+                }
                 ++i;
             }
             
@@ -228,7 +238,7 @@ public class View implements ActionListener
             else                date = "BOGUS";
             rowLabels.add(date);
             
-            radar.setRow(date, row, counts);
+            radar.setColumn(date, row, counts);
             ++row;
         }
     }
@@ -274,14 +284,41 @@ public class View implements ActionListener
             Radar.ActionEvent event = (Radar.ActionEvent) e;
             switch (event.getAction()) {
             case SCREEN_CLICK:
-                showDocument(documents.get(event.getRow()));
+                showDocument(documents.get(event.getColumn()));
+                searchBox.setText(columnLabels.get(event.getRow()));
                 break;
             case SCREEN_MOUSEOVER:
-                radar.setLabel(columnLabels.get(event.getColumn()) + ", " + rowLabels.get(event.getRow()));
+                radar.setLabel(rowLabels.get(event.getColumn()) + ", " + columnLabels.get(event.getRow()));
                 break;
             default:
                 System.err.println("unexpected action in Radar.ActionEvent: " + event.getAction());
             }
+        }
+        else if ("radar-image-fuzzy".equals(command)) {
+            radar.setFuzzy(true);
+            radar.repaint();
+        }
+        else if ("radar-image-sharp".equals(command)) {
+            radar.setFuzzy(false);
+            radar.repaint();
+        }
+        else if ("radar-image-zoom-1".equals(command)) {
+            radar.setZoom(1);
+        }
+        else if ("radar-image-zoom-2".equals(command)) {
+            radar.setZoom(2);
+        }
+        else if ("radar-image-zoom-3".equals(command)) {
+            radar.setZoom(3);
+        }
+        else if ("radar-image-zoom-4".equals(command)) {
+            radar.setZoom(4);
+        }
+        else if ("radar-image-zoom-10".equals(command)) {
+            radar.setZoom(10);
+        }
+        else if ("radar-image-zoom-20".equals(command)) {
+            radar.setZoom(20);
         }
         else {
             System.err.println("Error: Unexpected command: '" + command + "'");
@@ -352,6 +389,7 @@ public class View implements ActionListener
             }
         }
         metadataPane.add(label("Identifier: " + document.getIdentifier()));
+        window.setTitle("HistoRadar View - " + document.getIdentifier());
         
         Document.SegmentList segments;
         if (segmentsInDocuments != null) {
@@ -390,6 +428,7 @@ public class View implements ActionListener
         documentPane.setLayout(new BoxLayout(documentPane, BoxLayout.PAGE_AXIS));
         metadataPane.setLayout(new BoxLayout(metadataPane, BoxLayout.PAGE_AXIS));
         documentPane.add(metadataPane);
+        documentPane.add(searchBox = new JTextField());
         
         JTabbedPane tabbedDocumentView = new JTabbedPane();
         tabbedDocumentView.addTab("Document", null, new JScrollPane(documentView), "The annotated document");
@@ -435,8 +474,49 @@ public class View implements ActionListener
         group.add(item);
         menuBar.add(menu);
         
+        menu = new JMenu("Radar");
+        group = new ButtonGroup();
+        menu.add(item = new JRadioButtonMenuItem("Fuzzy"));
+        item.addActionListener(this);
+        item.setActionCommand("radar-image-fuzzy");
+        item.setSelected(true);
+        group.add(item);
+        menu.add(item = new JRadioButtonMenuItem("Sharp"));
+        item.addActionListener(this);
+        item.setActionCommand("radar-image-sharp");
+        group.add(item);
+        menu.add(submenu = new JMenu("Zoom"));
+        group = new ButtonGroup();
+        submenu.add(item = new JRadioButtonMenuItem("1×"));
+        item.addActionListener(this);
+        item.setActionCommand("radar-image-zoom-1");
+        group.add(item);
+        submenu.add(item = new JRadioButtonMenuItem("2×"));
+        item.addActionListener(this);
+        item.setActionCommand("radar-image-zoom-2");
+        group.add(item);
+        submenu.add(item = new JRadioButtonMenuItem("3×"));
+        item.addActionListener(this);
+        item.setActionCommand("radar-image-zoom-3");
+        group.add(item);
+        submenu.add(item = new JRadioButtonMenuItem("4×"));
+        item.addActionListener(this);
+        item.setActionCommand("radar-image-zoom-4");
+        item.setSelected(true);
+        group.add(item);
+        submenu.add(item = new JRadioButtonMenuItem("10×"));
+        item.addActionListener(this);
+        item.setActionCommand("radar-image-zoom-10");
+        group.add(item);
+        submenu.add(item = new JRadioButtonMenuItem("20×"));
+        item.addActionListener(this);
+        item.setActionCommand("radar-image-zoom-20");
+        group.add(item);
+
+        menuBar.add(menu);
+        
         menu = new JMenu("About");
-        menu.add(new JMenuItem("Version 2010-03-15 10:49"));
+        menu.add(new JMenuItem("Version 2010-03-18 08:32"));
         menuBar.add(menu);
         
         frame.setJMenuBar(menuBar);

@@ -53,22 +53,21 @@ public class SimpleRegexp extends NER
 //                patterns.put(type.getKey(), entity);
 //            }
 //        }
-
-                 patterns = new Document.PatternTable();
-                 patterns.put("country",
-                 "\\b(Spain|France|Germany|USA|Greece|Italy|Russia|Portugal|Switzerland|Austria|Belgium|Netherlands|Denmark|Sweden|Morocco" +
-                 "|Romania|the Balkans|Turkey|England|Bulgaria)\\b"
-                 );
-                 patterns.put("person",    "\\b(the Prime Minister|Lord Curzon|Vice-Admiral|Commander-in-Chief|Under-Secratary of State for Foreign Affairs" +
-                 "|the Sherif|Chief of the Imperial General Staff|Sir William Robertson|General Sarrail|Mr. Chamberlain|Lord Harding|Sir G. Buchanan|McMahon)\\b"
-                 );
-                 patterns.put("city",
-                 "\\b(Rome|Paris|Larissa|Medina|Salonica|Petrograd|Mecca|Athens)\\b"
-                 );
-//                 patterns.put("date",
-//                         "(?i?s?u)((\\w+?day|\\w+?uary|march|april|may|june|july|august|\\w+?mber|\\w+?ober)\\b.+?(?:[.,] ?m[.,]?|oon))"
-//                 );
-                         
+        
+        patterns = new Document.PatternTable();
+        patterns.put("country",
+                     "\\b(Spain|France|Germany|USA|Greece|Italy|Russia|Portugal|Switzerland|Austria|Belgium|Netherlands|Denmark|Sweden|Morocco" +
+                     "|Romania|the Balkans|Turkey|England|Bulgaria)\\b"
+                     );
+        patterns.put("person",    "\\b(the Prime Minister|Lord Curzon|Vice-Admiral|Commander-in-Chief|Under-Secratary of State for Foreign Affairs" +
+                     "|the Sherif|Chief of the Imperial General Staff|Sir William Robertson|General Sarrail|Mr. Chamberlain|Lord Harding|Sir G. Buchanan|McMahon)\\b"
+                     );
+        patterns.put("city",
+                     "\\b(Rome|Paris|Larissa|Medina|Salonica|Petrograd|Mecca|Athens)\\b"
+                     );
+        // patterns.put("date",
+        //              "(?i?s?u)((\\w+?day|\\w+?uary|march|april|may|june|july|august|\\w+?mber|\\w+?ober)\\b.+?(?:[.,] ?m[.,]?|oon))"
+        //              );
     }
     
     /**
@@ -81,20 +80,10 @@ public class SimpleRegexp extends NER
     {
         Document.SegmentList segments = new Document.SegmentList();
         String plainText = document.getPlainText();
-
-        // TODO: extract entities form plain text
+        
         segments = document.segment(patterns);
-
-//        return segments;
-
-        //for now, because I don't want to change anything in View.java, I will go through here to test
-        // OpenNlpNER
-        OpenNlpNER open = new OpenNlpNER();
-        return open.getEntities(document);
-
-//        //same as above for Stanford
-//        StanfordNER stanford = new StanfordNER();
-//        return stanford.getEntities(document);
+        
+        return segments;
     }
     
 }
