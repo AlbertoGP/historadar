@@ -31,6 +31,8 @@ import edu.stanford.nlp.ie.AbstractSequenceClassifier;
 import edu.stanford.nlp.ling.CoreLabel;
 import edu.stanford.nlp.ling.CoreAnnotations.AnswerAnnotation;
 import edu.stanford.nlp.util.StringUtils;
+import java.util.*;
+import edu.stanford.nlp.util.*;
 
 /**
  * Named entities extracted from a document.
@@ -63,9 +65,16 @@ public class StanfordNER extends NER
       AbstractSequenceClassifier classifier = CRFClassifier.getClassifierNoExceptions(serializedClassifier);
 
  
-        String result = classifier.classifyWithInlineXML(plainText);
+      List<Triple<String,Integer,Integer>> offsets = classifier.classifyToCharacterOffsets(plainText);
 
-
+      while(!offsets.isEmpty()) {
+          Integer begin = offsets.get(0).second;
+          Integer end = offsets.get(0).third;
+          Document.Segment segment = new Document.Segment(begin.intValue(), end.intValue());
+          segment.put("pattern-name", offsets.get(0).first().toLowerCase());
+          segments.add(segment);
+          offsets.remove(0);
+      }
 
         
         return segments;
