@@ -282,16 +282,18 @@ public class View
         }
         else if ("radar".equals(command)) {
             Radar.ActionEvent event = (Radar.ActionEvent) e;
-            switch (event.getAction()) {
-            case SCREEN_CLICK:
-                showDocument(documents.get(event.getColumn()));
-                searchBox.setText(columnLabels.get(event.getRow()));
-                break;
-            case SCREEN_MOUSEOVER:
-                radar.setLabel(rowLabels.get(event.getColumn()) + ", " + columnLabels.get(event.getRow()));
-                break;
-            default:
-                System.err.println("unexpected action in Radar.ActionEvent: " + event.getAction());
+            if (columnLabels != null && rowLabels != null) {
+                switch (event.getAction()) {
+                case SCREEN_CLICK:
+                    showDocument(documents.get(event.getColumn()));
+                    searchBox.setText(columnLabels.get(event.getRow()));
+                    break;
+                case SCREEN_MOUSEOVER:
+                    radar.setLabel(rowLabels.get(event.getColumn()) + ", " + columnLabels.get(event.getRow()));
+                    break;
+                default:
+                    System.err.println("unexpected action in Radar.ActionEvent: " + event.getAction());
+                }
             }
         }
         else if ("radar-image-fuzzy".equals(command)) {
@@ -516,7 +518,7 @@ public class View
         menuBar.add(menu);
         
         menu = new JMenu("About");
-        menu.add(new JMenuItem("Version 2010-03-18 08:32"));
+        menu.add(new JMenuItem("Version 2010-03-18 08:48"));
         menuBar.add(menu);
         
         frame.setJMenuBar(menuBar);
