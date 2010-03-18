@@ -38,8 +38,9 @@ public class Radar extends JPanel
 {
     protected Vector<ActionListener> actionListeners;
     protected String actionCommand;
-    protected HeatMap heatMap;
     
+    protected boolean fuzzy;
+    protected HeatMap heatMap;
     protected TimeScale timeScale;
     protected JLabel entityLabel;
     
@@ -47,39 +48,56 @@ public class Radar extends JPanel
     {
         actionListeners = new Vector<ActionListener>();
         actionCommand = "radar";
-        //addMouseListener(this);
-        //addMouseMotionListener(this);
-        //addMouseWheelListener(this);
+        
         setLayout(new BorderLayout());
         
         JPanel screen = new JPanel();
         screen.setLayout(new BorderLayout());
         
+        fuzzy = true;
         heatMap = new HeatMap();
         heatMap.addActionListener(this);
         heatMap.setActionCommand("heatmap");
+        heatMap.setFuzzy(fuzzy);
         screen.add(heatMap, BorderLayout.CENTER);
         
         timeScale = new TimeScale();
-        screen.add(timeScale, BorderLayout.WEST);
         
-        add(new JScrollPane(screen), BorderLayout.CENTER);
+        JScrollPane screenScrollPane;
+        add(screenScrollPane = new JScrollPane(screen), BorderLayout.CENTER);
+        screenScrollPane.getVerticalScrollBar()  .setUnitIncrement(4);
+        screenScrollPane.getHorizontalScrollBar().setUnitIncrement(4);
+        screenScrollPane.setColumnHeaderView(timeScale);
         
-        entityLabel = new JLabel("TODO: show current entity");
+        entityLabel = new JLabel(" ");
         add(entityLabel, BorderLayout.NORTH);
+    }
+    
+    public void setFuzzy(boolean fuzzy)
+    {
+        heatMap.setFuzzy(fuzzy);
+    }
+    
+    public void setZoom(int level)
+    {
+        heatMap.setZoom(level);
     }
     
     public void setDataSize(int width, int height)
     {
         heatMap.setDataSize(width, height);
-        validate();
     }
     
     public void setRow(String date, int row, double[] values)
     {
         timeScale.set(row, date);
         heatMap.setRow(row, values);
-        validate();
+    }
+    
+    public void setColumn(String date, int column, double[] values)
+    {
+        timeScale.set(column, date);
+        heatMap.setColumn(column, values);
     }
     
     public void setLabel(String text)

@@ -45,6 +45,7 @@ public class TimeScale extends JPanel
     protected String fontFamily;
     protected String dateFormatPattern;
     protected java.text.SimpleDateFormat dateFormat;
+    protected int dateTextWidth, dateTextHeight;
     
     public TimeScale()
     {
@@ -70,12 +71,15 @@ public class TimeScale extends JPanel
     
     protected void adjustSize()
     {
-        int width = dateFormatPattern.length() * fontSize * 3 / 4;
-        int height = dates.size() * fontSize;
+        dateTextWidth  = dateFormatPattern.length() * fontSize * 3 / 5;
+        dateTextHeight = fontSize;
+        int width  = dateTextWidth * dates.size();
+        int height = dateTextHeight * 2;
+        if (width  < fontSize) width  = fontSize;
         if (height < fontSize) height = fontSize;
         
-        Dimension size = new Dimension(width, height);
-        setMinimumSize(new Dimension(width, fontSize));
+        Dimension size = new Dimension(dateTextWidth, height);
+        setMinimumSize(new Dimension(dateTextWidth, fontSize));
         setPreferredSize(size);
         setSize(size);
     }
@@ -86,20 +90,26 @@ public class TimeScale extends JPanel
         g2.clearRect(0, 0, getWidth(), getHeight());
         g2.setFont(getFont());
         g2.setColor(Color.BLACK);
+        g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
+                            java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
         int fontOffset = fontSize;
-        int x, y, lastLabelY;
+        int x, y, lastLabelX;
         x = 0;
-        y = 0;
-        lastLabelY = -fontSize-1;
+        y = fontSize + fontSize/2;
+        int step = dateTextWidth + fontSize;
+        lastLabelX = -step-1;
         int index = 0;
         for (Date date : dates) {
-            y = index * getHeight() / dates.size();
-            //g2.setColor(Color.RED);
-            //g2.drawLine(0, y, getWidth(), y);
-            if (y - lastLabelY > fontSize) {
-                //g2.setColor(Color.BLACK);
-                g2.drawString(dateFormat.format(date), 0, y + fontOffset);
-                lastLabelY = y;
+            x = index * getWidth() / dates.size();
+            g2.setColor(Color.GRAY);
+            if (x - lastLabelX > step) {
+                g2.drawLine(x, 0, x, getHeight());
+                g2.setColor(Color.BLACK);
+                g2.drawString(dateFormat.format(date), x + 2, y);
+                lastLabelX = x;
+            }
+            else {
+                g2.drawLine(x, getHeight()-fontSize/4, x, getHeight());
             }
             ++index;
         }
