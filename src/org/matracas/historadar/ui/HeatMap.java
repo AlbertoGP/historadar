@@ -30,29 +30,45 @@ import java.awt.Dimension;
 import java.awt.image.BufferedImage;
 import java.awt.event.ActionListener;
 import javax.swing.event.MouseInputListener;
-import java.awt.event.MouseWheelListener;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseWheelEvent;
 import java.util.Vector;
 
 public class HeatMap extends JPanel
-    implements MouseInputListener, MouseWheelListener
+    implements MouseInputListener
 {
     protected Vector<ActionListener> actionListeners;
     protected String actionCommand;
     protected int dataWidth, dataHeight;
     protected BufferedImage image;
+    protected boolean fuzzy;
+    protected int zoomFactor;
     
     public HeatMap()
     {
         image = null;
+        fuzzy = true;
+        zoomFactor = 4;
         dataWidth  = 0;
         dataHeight = 0;
         actionListeners = new Vector<ActionListener>();
         actionCommand = "heatmap";
         addMouseListener(this);
         addMouseMotionListener(this);
-        addMouseWheelListener(this);
+    }
+    
+    public void setFuzzy(boolean fuzzy)
+    {
+        this.fuzzy = fuzzy;
+    }
+    
+    public void setZoom(int factor)
+    {
+        zoomFactor = factor;
+        setPreferredSize(new Dimension(dataWidth  * factor,
+                                       dataHeight * factor));
+        setMinimumSize(getPreferredSize());
+        revalidate();
+        repaint();
     }
     
     public void setDataSize(int width, int height)
@@ -64,12 +80,7 @@ public class HeatMap extends JPanel
         image = new BufferedImage(dataWidth, dataHeight,
                                   BufferedImage.TYPE_INT_RGB);
         setSize(dataWidth, dataHeight);
-        setMinimumSize(getSize());
-    }
-    
-    public Dimension getPreferredSize()
-    {
-        return new Dimension(dataWidth * 4, dataHeight * 4);
+        setZoom(zoomFactor);
     }
     
     public void setRow(int row, double[] values)
@@ -82,14 +93,34 @@ public class HeatMap extends JPanel
         for (int i = 0; i < end; ++i) {
             image.setRGB(i, row, ((int) (values[i] * 255.0)) << 8);
         }
+        
+        repaint();
+    }
+    
+    public void setColumn(int column, double[] values)
+    {
+        if (column < 0 || column >= dataWidth) return;
+        
+        int end = values.length;
+        if (end > dataHeight) end = dataHeight;
+        
+        for (int i = 0; i < end; ++i) {
+            image.setRGB(column, i, ((int) (values[i] * 255.0)) << 8);
+        }
+        
+        repaint();
     }
     
     public void paintComponent(Graphics g)
     {
-        Graphics2D g2 = (Graphics2D) g;
-        g2.setColor(Color.RED);
-        //g2.fillRect(0, 0, getWidth(), getHeight());
-        if (image != null) g.drawImage(image, 0, 0, getWidth(), getHeight(), null);
+        if (image != null) {
+            Graphics2D g2 = (Graphics2D) g;
+            if (fuzzy) {
+                g2.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION,
+                                    java.awt.RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            }
+            g.drawImage(image, 0, 0, getWidth(), getHeight(), null);
+        }
     }
     
     protected int getRow(int y)
@@ -171,8 +202,5 @@ public class HeatMap extends JPanel
     
     // MouseMotionListener
     public void mouseDragged(MouseEvent e) {}
-    
-    // MouseWheelListener
-    public void mouseWheelMoved(MouseWheelEvent e) {}
     
 }
