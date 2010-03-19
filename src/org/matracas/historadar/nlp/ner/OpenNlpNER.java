@@ -62,15 +62,17 @@ public class OpenNlpNER extends NER
         Document.SegmentList segments = new Document.SegmentList();
         String plainText = document.getPlainText();
 
-        // TODO: extract entities form plain text
+
         GISModel m;
         DataInputStream personFile, locationFile, sentenceFile, tokenFile;
         try {
+            /*create input streams for the files containing the required models*/
             personFile   = new DataInputStream(new GZIPInputStream(getClass().getResourceAsStream("/lib/opennlp/models/person.bin.gz")));
             locationFile   = new DataInputStream(new GZIPInputStream(getClass().getResourceAsStream("/lib/opennlp/models/location.bin.gz")));
             sentenceFile = new DataInputStream(new GZIPInputStream(getClass().getResourceAsStream("/lib/opennlp/models/EnglishSD.bin.gz")));
             tokenFile    = new DataInputStream(new GZIPInputStream(getClass().getResourceAsStream("/lib/opennlp/models/EnglishTok.bin.gz")));
 
+            /*get the models and create with them the objects necessary to process the text*/
             BinaryGISModelReader reader = new BinaryGISModelReader(personFile);
             m = reader.getModel();
             NameFinderME personFinder = new NameFinderME(m);
@@ -87,15 +89,20 @@ public class OpenNlpNER extends NER
             m = reader.getModel();
             TokenizerME tokenizer = new TokenizerME(m);
 
+
+            /*split the text into sentences*/
             String[] sentences = detector.sentDetect(plainText);
 
-
+            /*For each sentence, first tokenize it, then get the person names from it.
+              @position: required to keep track of where in the text we are*/
             int position = 0;
-
             for (String sent:sentences) {
+
+                //tokenize and find names
                 String[] tokens = tokenizer.tokenize(sent);
                 Span[] spans = personFinder.find(tokens);
 
+                //now create a segment for each name found and add it to the list
                 for (Span s:spans) {
                     Segment segment = createSegment(s,tokens,plainText,position);
                     segment.put("pattern-name", "person");
@@ -106,12 +113,16 @@ public class OpenNlpNER extends NER
             }
 
 
+            /*Now do the same thing as above again, only for locations. (Yes, we tokenize everything
+              twice. It's not pretty, but at least it works.)*/
             position = 0;
-
             for (String sent:sentences) {
+
+                //tokenize and find names
                 String[] tokens = tokenizer.tokenize(sent);
                 Span[] spans = locationFinder.find(tokens);
 
+                //now create a segment for each name found and add it to the list
                 for (Span s:spans) {
                     Segment segment = createSegment(s,tokens,plainText,position);
                     segment.put("pattern-name", "location");
@@ -132,7 +143,8 @@ public class OpenNlpNER extends NER
         }
 
 
-
+        /*for some reason, View seems not to be able to handle unsorted segment lists, so we sort
+         it before returning it*/
         Collections.sort(segments);
         return segments;
     }
@@ -151,9 +163,9 @@ public class OpenNlpNER extends NER
         Document.Segment guessedSegment = new Document.Segment(start, end);
 
         /*get the NE from the list of tokens*/
-        String NE = "";
+        StringBuffer NE = new StringBuffer();
         for (int i=span.getStart();i<span.getEnd();i++) {
-            NE = NE + (tokens[i]);
+            NE.append(tokens[i]);
         }
 
         /*try moving the segment around in the text, until it matches the NE*/
@@ -166,7 +178,7 @@ public class OpenNlpNER extends NER
                 segmentText = segmentText.replaceAll(" ", "");
 
                 /*compare text from the segment to NE. If they match, find end and return segment*/
-                if (segmentText.equals(NE)) {
+                if (segmentText.equals(NE.toString())) {
                     end = start + length;
 //                    System.out.println("match: " + segmentText);
                     return new Document.Segment(start, end);
