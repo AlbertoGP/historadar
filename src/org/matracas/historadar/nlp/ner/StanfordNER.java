@@ -56,25 +56,27 @@ public class StanfordNER extends NER
     {
         Document.SegmentList segments = new Document.SegmentList();
         String plainText = document.getPlainText();
-
-        // TODO: extract entities form plain text
+        
+        /*load the NE classifier from its file*/
         String serializedClassifier = "lib/StanfordNER/classifiers/ner-eng-ie.crf-3-all2008.ser.gz";
+        AbstractSequenceClassifier classifier = CRFClassifier.getClassifierNoExceptions(serializedClassifier);
 
+        /*run the classifier and store the results in a list*/
+        List<Triple<String,Integer,Integer>> offsets = classifier.classifyToCharacterOffsets(plainText);
 
+        /*convert the triples the classifier returned to Document.Segment and add them to the segment
+         list */  
+        while(!offsets.isEmpty()) {
+              
+              Integer begin = offsets.get(0).second;
+              Integer end = offsets.get(0).third;
 
-      AbstractSequenceClassifier classifier = CRFClassifier.getClassifierNoExceptions(serializedClassifier);
+              Document.Segment segment = new Document.Segment(begin.intValue(), end.intValue());
+              segment.put("pattern-name", offsets.get(0).first().toLowerCase());
 
- 
-      List<Triple<String,Integer,Integer>> offsets = classifier.classifyToCharacterOffsets(plainText);
-
-      while(!offsets.isEmpty()) {
-          Integer begin = offsets.get(0).second;
-          Integer end = offsets.get(0).third;
-          Document.Segment segment = new Document.Segment(begin.intValue(), end.intValue());
-          segment.put("pattern-name", offsets.get(0).first().toLowerCase());
-          segments.add(segment);
-          offsets.remove(0);
-      }
+              segments.add(segment);
+              offsets.remove(0);
+        }
 
         
         return segments;
