@@ -2,6 +2,8 @@
 //
 //   Copyright 2010 Alberto González Palomo
 //   Author: Alberto González Palomo - http://matracas.org/
+//   Copyright 2010 Uwe-Matthias Bolz
+//   Author: Uwe-Matthias Bolz - https://historadar.googlecode.com/people/list
 //
 //   This file is part of HistoRadar, the History Radar.
 //
@@ -40,12 +42,15 @@ import edu.stanford.nlp.util.*;
  */
 public class StanfordNER extends NER
 {
-    protected Document.PatternTable patterns;
-
+    protected AbstractSequenceClassifier classifier;
+    
     public StanfordNER(Document.Collection collection)
     {
+        /*load the NE classifier from its file*/
+        String serializedClassifier = "lib/StanfordNER/classifiers/ner-eng-ie.crf-3-all2008.ser.gz";
+        classifier = CRFClassifier.getClassifierNoExceptions(serializedClassifier);
     }
-
+    
     /**
      * Get the entities from a given document,
      * based on the linguistic analysis of the document collection.
@@ -57,29 +62,23 @@ public class StanfordNER extends NER
         Document.SegmentList segments = new Document.SegmentList();
         String plainText = document.getPlainText();
         
-        /*load the NE classifier from its file*/
-        String serializedClassifier = "lib/StanfordNER/classifiers/ner-eng-ie.crf-3-all2008.ser.gz";
-        AbstractSequenceClassifier classifier = CRFClassifier.getClassifierNoExceptions(serializedClassifier);
-
         /*run the classifier and store the results in a list*/
         List<Triple<String,Integer,Integer>> offsets = classifier.classifyToCharacterOffsets(plainText);
-
+        
         /*convert the triples the classifier returned to Document.Segment and add them to the segment
-         list */  
+          list */  
         while(!offsets.isEmpty()) {
-              
-              Integer begin = offsets.get(0).second;
-              Integer end = offsets.get(0).third;
-
-              Document.Segment segment = new Document.Segment(begin.intValue(), end.intValue());
-              segment.put("pattern-name", offsets.get(0).first().toLowerCase());
-
-              segments.add(segment);
-              offsets.remove(0);
+            Integer begin = offsets.get(0).second;
+            Integer end = offsets.get(0).third;
+            
+            Document.Segment segment = new Document.Segment(begin.intValue(), end.intValue());
+            segment.put("pattern-name", offsets.get(0).first().toLowerCase());
+            
+            segments.add(segment);
+            offsets.remove(0);
         }
-
         
         return segments;
     }
-
+    
 }
