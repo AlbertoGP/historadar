@@ -46,6 +46,7 @@ public class Document
     protected String plainText;
     protected String identifier;
     protected Metadata metadata;
+    protected File file;
     
     protected Document()
     {
@@ -62,6 +63,7 @@ public class Document
     {
         metadata = new Metadata();
         this.identifier = identifier;
+        plainText = null;
     }
     
     /**
@@ -77,6 +79,15 @@ public class Document
     {
         this(identifier);
         if (null == this.identifier) this.identifier = file.getName();
+        this.file = file;
+    }
+    
+    /**
+     * Load the document if not done yet.
+     */
+    protected void loadIfNecessary()
+    {
+        if (plainText != null) return;
         
         BufferedReader reader = null;
         try {
@@ -116,6 +127,8 @@ public class Document
      */
     public String getPlainText()
     {
+        loadIfNecessary();
+        
         return plainText;
     }
     
@@ -126,6 +139,8 @@ public class Document
      */
     public String getPlainText(Segment segment)
     {
+        loadIfNecessary();
+        
         return plainText.substring(segment.begin, segment.end);
     }
     
