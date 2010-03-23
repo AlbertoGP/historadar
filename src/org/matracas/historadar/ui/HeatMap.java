@@ -42,6 +42,8 @@ public class HeatMap extends JPanel
     protected BufferedImage image;
     protected boolean fuzzy;
     protected int zoomFactor;
+    protected int signalMask;
+    protected int crosshairMask;
     
     public HeatMap()
     {
@@ -50,6 +52,8 @@ public class HeatMap extends JPanel
         zoomFactor = 4;
         dataWidth  = 0;
         dataHeight = 0;
+        signalMask    = 0x0000FF00;
+        crosshairMask = 0x00FF0000;
         actionListeners = new Vector<ActionListener>();
         actionCommand = "heatmap";
         addMouseListener(this);
@@ -103,8 +107,11 @@ public class HeatMap extends JPanel
         int end = values.length;
         if (end > dataWidth) end = dataWidth;
         
+        int intensity;
         for (int i = 0; i < end; ++i) {
-            image.setRGB(i, row, ((int) (values[i] * 255.0)) << 8);
+            intensity = (int) (values[i] * 255.0);
+            intensity |= intensity << 8 | intensity << 16;
+            image.setRGB(i, row, intensity & signalMask);
         }
         
         repaint();
@@ -117,8 +124,11 @@ public class HeatMap extends JPanel
         int end = values.length;
         if (end > dataHeight) end = dataHeight;
         
+        int intensity;
         for (int i = 0; i < end; ++i) {
-            image.setRGB(column, i, ((int) (values[i] * 255.0)) << 8);
+            intensity = (int) (values[i] * 255.0);
+            intensity |= intensity << 8 | intensity << 16;
+            image.setRGB(column, i, intensity & signalMask);
         }
         
         repaint();
@@ -190,6 +200,26 @@ public class HeatMap extends JPanel
         row    = getRow   (e.getY());
         column = getColumn(e.getX());
         if (row >= dataHeight || column >= dataWidth) return;
+        
+        int color;
+        for (int y = 0; y < dataHeight; ++y) {
+            for (int x = 0; x < dataWidth; ++x) {
+                color = image.getRGB(x, y);
+                color &= signalMask;
+                image.setRGB(x, y, color);
+            }
+        }
+        for (int y = 0; y < dataHeight; ++y) {
+            color = image.getRGB(column, y) & signalMask;
+            color = color | crosshairMask;
+            image.setRGB(column, y, color);
+        }
+        for (int x = 0; x < dataWidth; ++x) {
+            color = image.getRGB(x, row) & signalMask;
+            color = color | crosshairMask;
+            image.setRGB(x, row, color);
+        }
+        repaint();
         
         ActionEvent event = new ActionEvent(this, row, column, actionCommand,
                                             ActionEvent.Action.CLICK);
