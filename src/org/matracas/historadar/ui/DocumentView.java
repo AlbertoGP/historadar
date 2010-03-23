@@ -58,6 +58,7 @@ public class DocumentView extends JTextPane
                 styleSheet.addRule("span." + type + " { background:" + getColor(type) + "; }");
             }
             ToolTipManager.sharedInstance().registerComponent(this);
+            setCaretPosition(0);
         }
         else {
             setText(document.getXMLString(segments));
