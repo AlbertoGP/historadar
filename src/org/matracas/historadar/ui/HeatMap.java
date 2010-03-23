@@ -61,6 +61,11 @@ public class HeatMap extends JPanel
         this.fuzzy = fuzzy;
     }
     
+    public boolean getFuzzy()
+    {
+        return fuzzy;
+    }
+    
     public void setZoom(int factor)
     {
         zoomFactor = factor;
@@ -71,14 +76,22 @@ public class HeatMap extends JPanel
         repaint();
     }
     
+    public int getZoom()
+    {
+        return zoomFactor;
+    }
+    
     public void setDataSize(int width, int height)
     {
         dataWidth  = width;
         dataHeight = height;
-        if (dataWidth  < 1) dataWidth  = 1;
-        if (dataHeight < 1) dataHeight = 1;
-        image = new BufferedImage(dataWidth, dataHeight,
-                                  BufferedImage.TYPE_INT_RGB);
+        if (dataWidth > 0 && dataHeight > 0) {
+            image = new BufferedImage(dataWidth, dataHeight,
+                                      BufferedImage.TYPE_INT_RGB);
+        }
+        else {
+            image = null;
+        }
         setSize(dataWidth, dataHeight);
         setZoom(zoomFactor);
     }
@@ -173,20 +186,24 @@ public class HeatMap extends JPanel
     // MouseInputListener = MouseListener + MouseMotionLister
     public void mouseClicked(MouseEvent e)
     {
-        ActionEvent event = new ActionEvent(this,
-                                            getRow(e.getY()),
-                                            getColumn(e.getX()),
-                                            actionCommand,
+        int row, column;
+        row    = getRow   (e.getY());
+        column = getColumn(e.getX());
+        if (row >= dataHeight || column >= dataWidth) return;
+        
+        ActionEvent event = new ActionEvent(this, row, column, actionCommand,
                                             ActionEvent.Action.CLICK);
         dispatch(event);
     }
     
     public void mouseMoved(MouseEvent e)
     {
-        ActionEvent event = new ActionEvent(this,
-                                            getRow(e.getY()),
-                                            getColumn(e.getX()),
-                                            actionCommand,
+        int row, column;
+        row    = getRow   (e.getY());
+        column = getColumn(e.getX());
+        if (row >= dataHeight || column >= dataWidth) return;
+        
+        ActionEvent event = new ActionEvent(this, row, column, actionCommand,
                                             ActionEvent.Action.MOVE);
         dispatch(event);
     }
