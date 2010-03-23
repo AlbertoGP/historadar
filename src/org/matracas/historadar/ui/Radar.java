@@ -64,7 +64,8 @@ public class Radar extends JPanel
         timeScale = new TimeScale();
         
         JScrollPane screenScrollPane;
-        add(screenScrollPane = new JScrollPane(screen), BorderLayout.CENTER);
+        screenScrollPane = new JScrollPane(screen, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        add(screenScrollPane, BorderLayout.CENTER);
         screenScrollPane.getVerticalScrollBar()  .setUnitIncrement(4);
         screenScrollPane.getHorizontalScrollBar().setUnitIncrement(4);
         screenScrollPane.setColumnHeaderView(timeScale);
@@ -78,14 +79,25 @@ public class Radar extends JPanel
         heatMap.setFuzzy(fuzzy);
     }
     
+    public boolean getFuzzy()
+    {
+        return heatMap.getFuzzy();
+    }
+    
     public void setZoom(int level)
     {
         heatMap.setZoom(level);
     }
     
+    public int getZoom()
+    {
+        return heatMap.getZoom();
+    }
+    
     public void setDataSize(int width, int height)
     {
         heatMap.setDataSize(width, height);
+        validate();
     }
     
     public void setRow(String date, int row, double[] values)
