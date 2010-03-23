@@ -566,6 +566,8 @@ public class Document
         protected org.w3c.dom.ls.LSSerializer serializer;
         protected org.w3c.dom.Document document;
         protected Element content;
+        protected Element currentPage = null;
+        protected int currentPageNumber = 0;
         
         public XMLVocabulary()
         {
@@ -594,6 +596,7 @@ public class Document
         {
             document = dom.createDocument("http://matracas.org/ns/historadar", "document", null);
             content = document.getDocumentElement();
+            newPage();
             
             return document;
         }
@@ -601,6 +604,22 @@ public class Document
         public Element getContentElement()
         {
             return content;
+        }
+        
+        protected int newPage()
+        {
+            if (currentPage != null && ! currentPage.hasChildNodes()) {
+                currentPage.appendChild(document.createTextNode(" "));
+            }
+            
+            ++currentPageNumber;
+            currentPage = document.createElement("div");
+            currentPage.setAttribute("class", "page");
+            currentPage.setAttribute("number",
+                                     String.valueOf(currentPageNumber));
+            content.appendChild(currentPage);
+            
+            return currentPageNumber;
         }
         
         public int appendText(Element element, String text, int begin, int end)
@@ -616,11 +635,19 @@ public class Document
         
         public void appendText(Element element, String text)
         {
-            element.appendChild(element.getOwnerDocument().createTextNode(text.replace("", "\n------------------------------------------------------\n")));
+            if (element == content) element = currentPage;
+            
+            String[] textPieces = text.split("");
+            for (int i = 0; i < textPieces.length; ++i) {
+                if (i > 0) newPage();
+                element.appendChild(document.createTextNode(textPieces[i]));
+            }
         }
         
         public Element appendElement(Element element, Segment segment)
         {
+            if (element == content) element = currentPage;
+            
             String tagName = segment.get("pattern-name");
             if (null == tagName) tagName = "segment";
             Element tag = element.getOwnerDocument().createElement(tagName);
@@ -649,12 +676,15 @@ public class Document
             document = dom.createDocument("http://www.w3.org/1999/xhtml", "html", null);
             content = document.createElement("body");
             document.getDocumentElement().appendChild(content);
+            newPage();
             
             return document;
         }
         
         public Element appendElement(Element element, Segment segment)
         {
+            if (element == content) element = currentPage;
+            
             String tagName = segment.get("pattern-name");
             if (null == tagName) tagName = "segment";
             Element tag = element.getOwnerDocument().createElement("span");
