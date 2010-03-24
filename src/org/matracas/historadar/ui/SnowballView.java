@@ -92,8 +92,8 @@ public class SnowballView extends DocumentView
         try {
             HTMLDocument snowball = (HTMLDocument) getDocument();
             javax.swing.text.html.HTMLEditorKit editorKit = (javax.swing.text.html.HTMLEditorKit) getEditorKit();
-            String content = "<div><h2>Document " + document.getIdentifier() + "</h2>";
-            content += "<table border='1' style='font-family:sans-serif'>";
+            String content = "<div style='font-family:sans-serif'><h2>Document " + document.getIdentifier() + "</h2>";
+            content += "<table border='1'>";
             Document.Metadata.Values values;
             values = document.getMetadata().get(Document.Metadata.date);
             if (values != null) {
