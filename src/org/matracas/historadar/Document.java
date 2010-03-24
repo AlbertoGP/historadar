@@ -588,8 +588,31 @@ public class Document
             }
             
             dom = registry.getDOMImplementation("XML 3.0");
+            if (null == dom) {
+                // This implementation does not support DOM level 3.
+                javax.xml.parsers.DocumentBuilderFactory builderFactory;
+                javax.xml.parsers.DocumentBuilder documentBuilder;
+                builderFactory = javax.xml.parsers.DocumentBuilderFactory.newInstance();
+                builderFactory.setNamespaceAware(true);
+                try {
+                    documentBuilder = builderFactory.newDocumentBuilder();
+                }
+                catch (javax.xml.parsers.ParserConfigurationException e) {
+                    System.err.println("Error: " + e);
+                    documentBuilder = null;
+                }
+                dom = documentBuilder.getDOMImplementation();
+            }
+            
             loadSave = (DOMImplementationLS) registry.getDOMImplementation("LS");
-            serializer = loadSave.createLSSerializer();
+            if (null == loadSave) {
+                // This implementation does not support the LoadSave module.
+                // Most likely it's Java 1.5.
+                serializer = new org.matracas.compat.LSSerializer();
+            }
+            else {
+                serializer = loadSave.createLSSerializer();
+            }
         }
         
         public org.w3c.dom.Document createDocument()
@@ -668,7 +691,10 @@ public class Document
         public XMLVocabularyHTML()
         {
             super();
-            serializer.getDomConfig().setParameter("xml-declaration", Boolean.FALSE);
+            if (serializer != null) {
+                serializer.getDomConfig()
+                    .setParameter("xml-declaration", Boolean.FALSE);
+            }
         }
         
         public org.w3c.dom.Document createDocument()
@@ -697,7 +723,7 @@ public class Document
         
         public String serialize(org.w3c.dom.Node node)
         {
-            return serializer.writeToString(node).replace("\n", "<br/>");
+            return super.serialize(node).replace("\n", "<br/>");
         }
         
     }
@@ -751,9 +777,16 @@ public class Document
             documents = new HashMap<String, Document>();
             sortedDocuments = null;
             
+            if (! directory.exists()) {
+                System.err.println("Directory not found: " + directory.getAbsolutePath());
+                
+                return;
+            }
+            
             Document document;
             String identifier;
             File[] files = directory.listFiles();
+            
             for (int i = 0; i < files.length; ++i) {
                 System.err.println("Loading file " + (i+1) + " of " + files.length + ": " + files[i].getName());
                 document = null;
