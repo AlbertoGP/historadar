@@ -118,7 +118,7 @@ public class SnowballView extends DocumentView
             content += "<tr><td>Date bookmarked</td><td colspan='2'>" + dateFormat.format(date) + "</td></tr>";
             content += "<tr><td colspan='3' style='font-family:serif'>" + context + "</td></tr>";
             content += "<tr><td>Notes</td><td colspan='2'>&nbsp;</td></tr>";
-            content += "</table></div> <br/>";
+            content += "</table></div> <br />";
             editorKit.insertHTML(snowball, snowball.getLength(),
                                  content,
                                  0, 0, null);
