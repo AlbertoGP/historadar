@@ -168,7 +168,7 @@ public class HeatMap extends JPanel
     
     public static class ActionEvent extends java.awt.event.ActionEvent
     {
-        public enum Action { CLICK, MOVE };
+        public enum Action { CLICK, MOVE, LEAVE };
         
         protected int row, column;
         protected Action action;
@@ -238,10 +238,15 @@ public class HeatMap extends JPanel
         dispatch(event);
     }
     
+    public void mouseExited(MouseEvent e)
+    {
+        ActionEvent event = new ActionEvent(this, -1, -1, actionCommand,
+                                            ActionEvent.Action.LEAVE);
+        dispatch(event);
+    }
+    
     // MouseListener
     public void mouseEntered(MouseEvent e) {}
-    
-    public void mouseExited(MouseEvent e) {}
     
     public void mousePressed(MouseEvent e) {}
     
