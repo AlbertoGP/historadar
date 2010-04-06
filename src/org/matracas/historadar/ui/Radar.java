@@ -129,7 +129,7 @@ public class Radar extends JPanel
     
     public static class ActionEvent extends java.awt.event.ActionEvent
     {
-        public enum Action { SCREEN_CLICK, SCREEN_MOUSEOVER };
+        public enum Action { SCREEN_CLICK, SCREEN_MOUSEOVER, SCREEN_LEAVE };
         
         protected int row, column;
         protected Action action;
@@ -173,6 +173,13 @@ public class Radar extends JPanel
                                          event.getRow(), event.getColumn(),
                                          actionCommand,
                                          ActionEvent.Action.SCREEN_MOUSEOVER
+                                         ));
+                break;
+            case LEAVE:
+                dispatch(new ActionEvent(this,
+                                         event.getRow(), event.getColumn(),
+                                         actionCommand,
+                                         ActionEvent.Action.SCREEN_LEAVE
                                          ));
                 break;
             default:
