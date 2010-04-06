@@ -13,17 +13,33 @@
     <tstamp/>
     <!-- Create the build directory structure used by compile -->
     <mkdir dir="${build}"/>
+    <!-- Platform checks -->
+    <available property="hasSwingWorker" classname="javax.swing.SwingWorker"/>
   </target>
   
-  <target name="compile" depends="init"
+  <target name="classpath-compat" depends="classpath-with-SwingWorker,classpath-without-SwingWorker"/>
+  <target name="classpath-with-SwingWorker" if="hasSwingWorker">
+    <echo message="javax.swing.SwingWorker is available"/>
+    <fileset id="classpath-compat" dir="lib-compat" excludes="*"/>
+  </target>
+  <target name="classpath-without-SwingWorker" unless="hasSwingWorker">
+    <echo message="Including javax.swing.SwingWorker backport for Java 1.5"/>
+    <fileset id="classpath-compat" dir="lib-compat">
+      <include name="swingworker-historadar-drop-in.jar"/>
+    </fileset>
+  </target>
+  
+  <target name="compile" depends="init, classpath-compat"
           description="compile the source " >
     <!-- Compile the java code from ${src} into ${build} -->
+    <echo message="hasSwingWorker=${hasSwingWorker}"/>
     <javac debug="on" srcdir="${src}" destdir="${build}" encoding="UTF-8">
       <classpath>
         <pathelement path="${classpath}"/>
         <fileset dir="lib">
           <include name="**/*.jar"/>
         </fileset>
+        <fileset refid="classpath-compat"/>
       </classpath>
     </javac>
   </target>
@@ -43,6 +59,7 @@
       <zipgroupfileset dir="lib/">
         <include name="**/*.jar"/>
       </zipgroupfileset>
+      <zipgroupfileset refid="classpath-compat"/>
     </jar>
     <sleep seconds="1"/>
     <jar jarfile="${dist}/lib/historadar-${DSTAMP}.jar" manifest="Manifest.txt">
