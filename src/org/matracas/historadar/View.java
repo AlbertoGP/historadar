@@ -37,6 +37,7 @@ import java.util.prefs.Preferences;
 
 import org.matracas.historadar.Document;
 import org.matracas.historadar.ui.DocumentView;
+import org.matracas.historadar.ui.SnowballView;
 import org.matracas.historadar.ui.Radar;
 import org.matracas.historadar.nlp.OCR;
 import org.matracas.historadar.nlp.Metadata;
@@ -54,20 +55,28 @@ public class View
     protected Preferences prefs;
     
     private JFrame window;
+    private Map<String, JMenuItem> menuItems;
+    private Map<String, JButton>   buttons;
     private JSplitPane view;
     private JPanel documentPane;
     private JPanel metadataPane;
     private JTextField searchBox;
     private DocumentView documentView;
-    private DocumentView documentSourceView;
+    private SnowballView snowballView;
+    private File snowballFile;
     private Radar radar;
-    private JPanel overlay;
+    private int selectedRow, selectedColumn;
+    private JPanel progressIndicator;
     private JProgressBar progressBar;
+    private SwingWorker worker;
     
     protected Document.Collection documents;
     protected Document currentDocument;
     protected String documentDate;
-    protected Map<String, Document.SegmentList> segmentsInDocuments;
+    protected class SegmentsTable extends Hashtable<String, Document.SegmentList>
+    {
+    }
+    protected SegmentsTable segmentsInDocuments;
     
     protected OCR ocr;
     protected Metadata metadata;
@@ -81,66 +90,104 @@ public class View
         window = new JFrame("HistoRadar View");
         window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         window.setSize(800,600);
+        menuItems = new Hashtable<String, JMenuItem>();
+        buttons   = new Hashtable<String, JButton>();
         buildGUI(window);
         window.setVisible(true);
         
-        overlay = new JPanel();
-        overlay.setLayout(new BorderLayout());
-        progressBar = new JProgressBar();
-        overlay.add(progressBar, BorderLayout.CENTER);
-        
+        snowballFile = null;
         currentDocument = null;
+        worker = null;
         if (args.length == 1) {
             loadCollection(new File(args[0]));
+            visualize(documents);
         }
         else {
             documents = null;
         }
-        showDocument();
+        
+        selectedRow    = -1;
+        selectedColumn = -1;
+        
+        syncInterface();
     }
     
     protected void visualize(Document.Collection documents)
     {
         window.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
         
-        visualizeEntities(documents);
-        view.setDividerLocation(view.getWidth() - view.getDividerSize() - (int) radar.getPreferredSize().getWidth());
-        showDocument();
+        if (worker != null) worker.cancel(true);
+        worker = new AnnotatorThread();
+        worker.execute();
+    }
+    
+    protected class AnnotatorThread extends SwingWorker<SegmentsTable, Void> {
+        public AnnotatorThread() {
+        }
         
-        window.setCursor(Cursor.getDefaultCursor());
+        public SegmentsTable doInBackground() {
+            progressBar.setValue(0);
+            progressBar.setMaximum(documents.size());
+            progressIndicator.setVisible(true);
+            long start, stop;
+            start = System.currentTimeMillis();
+            SegmentsTable segmentsInDocuments = new SegmentsTable();
+            int progress = 0;
+            for (Document document : documents) {
+                if (isCancelled()) break;
+                progressBar.setValue(++progress);
+                Document.SegmentList segments = annotateDocument(document);
+                segmentsInDocuments.put(document.getIdentifier(), segments);
+            }
+            documents.sort();
+            stop = System.currentTimeMillis();
+            double elapsed = stop - start;
+            java.text.NumberFormat format = java.text.NumberFormat.getInstance(java.util.Locale.ENGLISH);
+            format.setMaximumFractionDigits(3);
+            if (documents.size() > 0) System.err.println("Processed " + documents.size() + " documents in " + format.format(elapsed / 1000) + "s\nAverage " + format.format(elapsed / 1000 / documents.size()) + "s per document");
+            
+            return segmentsInDocuments;
+        }
+        
+        public void done() {
+            try {
+                segmentsInDocuments = get();
+                visualizeEntities(documents, segmentsInDocuments);
+                view.setDividerLocation(view.getWidth() - view.getDividerSize() - (int) radar.getPreferredSize().getWidth() - 1);
+                showDocument();
+            }
+            catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            catch (java.util.concurrent.ExecutionException e) {
+                e.printStackTrace();
+            }
+            catch (java.util.concurrent.CancellationException e) {
+                // OK. This was cancelled on request.
+            }
+            finally {
+                progressIndicator.setVisible(false);
+                window.setCursor(Cursor.getDefaultCursor());
+            }
+        }
     }
     
     protected boolean loadCollection(File directory)
     {
         documents = new Document.Collection(directory);
         segmentsInDocuments = null;
+        snowballFile = null;
         
-        ocr      = new OCR(documents);
-        metadata = new Metadata(documents);
-        tagger   = new SimpleRegexp(documents);
-        
-        visualize(documents);
+        if (null == ocr)      ocr      = new OCR(documents);
+        if (null == metadata) metadata = new Metadata(documents);
+        if (null == tagger)   tagger   = new SimpleRegexp(documents);
         
         return true;
     }
     
-    protected void processCollection(Document.Collection documents)
+    protected void visualizeEntityTypes(Document.Collection documents, SegmentsTable segmentsInDocuments)
     {
-        segmentsInDocuments = new Hashtable<String, Document.SegmentList>();
-        int progress = 0;
-        for (Document document : documents) {
-            progressBar.setValue(++progress);
-            Document.SegmentList segments = annotateDocument(document);
-            segmentsInDocuments.put(document.getIdentifier(), segments);
-        }
-        documents.sort();
-    }
-    
-    protected void visualizeEntityTypes(Document.Collection documents)
-    {
-        if (null == documents) return;
-        
-        if (null == segmentsInDocuments) processCollection(documents);
+        if (null == documents || null == segmentsInDocuments) return;
         
         java.util.Set<String> types = new java.util.TreeSet<String>();
         java.util.Vector<Map<String, Integer> > typeCounts = new java.util.Vector<Map<String, Integer> >();
@@ -171,11 +218,9 @@ public class View
     }
     
     protected java.util.Vector<String> rowLabels, columnLabels;
-    protected void visualizeEntities(Document.Collection documents)
+    protected void visualizeEntities(Document.Collection documents, SegmentsTable segmentsInDocuments)
     {
-        if (null == documents) return;
-        
-        if (null == segmentsInDocuments) processCollection(documents);
+        if (null == documents || null == segmentsInDocuments) return;
         
         java.util.Set<String> types = new java.util.TreeSet<String>();
         java.util.Vector<Map<String, Integer> > typeCounts = new java.util.Vector<Map<String, Integer> >();
@@ -243,27 +288,119 @@ public class View
         }
     }
     
-    public void actionPerformed(ActionEvent e)
+    protected File requestFile(String key, boolean forWriting, String filterDescription, String... extensions)
     {
-        String command = e.getActionCommand();
+        return requestFile(key, forWriting, JFileChooser.FILES_AND_DIRECTORIES, filterDescription, extensions);
+    }
+    
+    protected File requestDirectory(String key)
+    {
+        return requestFile(key, false, JFileChooser.DIRECTORIES_ONLY, null);
+    }
+    
+    protected File requestFile(String key, boolean forWriting, int mode, String filterDescription, String... extensions)
+    {
+        if (null == key) key = "defaultCollection";
+        String lastCollectionLoaded = prefs.get(key, ".");
+        
+        File file = null;
+        boolean retry = true;
+        while (retry) {
+            JFileChooser fileChooser = new JFileChooser(lastCollectionLoaded);
+            if (lastCollectionLoaded != "." && JFileChooser.DIRECTORIES_ONLY == mode) {
+                fileChooser.changeToParentDirectory();
+            }
+            if (mode != 0) fileChooser.setFileSelectionMode(mode);
+            if (filterDescription != null) {
+                fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(filterDescription, extensions));
+            }
+            int returnValue = fileChooser.showOpenDialog(window);
+            if (JFileChooser.APPROVE_OPTION == returnValue) {
+                file = fileChooser.getSelectedFile();
+                prefs.put(key, file.getAbsolutePath());
+            }
+            else {
+                file = null;
+            }
+            
+            if (forWriting && file != null && file.exists()) {
+                int result = ask("The file exists. Overwrite?",
+                                 "Overwrite",
+                                 "Use another name",
+                                 "Cancel");
+                switch (result) {
+                case JOptionPane.YES_OPTION:
+                    retry = false;
+                    break;
+                case JOptionPane.NO_OPTION:
+                    file = null;
+                    break;
+                case JOptionPane.CANCEL_OPTION:
+                    file = null;
+                    retry = false;
+                    break;
+                }
+            }
+            else {
+                retry = false;
+            }
+        }
+        
+        return file;
+    }
+    
+    protected int ask(String question, String yes, String no, String cancel)
+    {
+        String[] options = { yes, no, cancel };
+        return JOptionPane.showOptionDialog(window,
+                                            question,
+                                            "HistoRadar",
+                                            JOptionPane.YES_NO_CANCEL_OPTION,
+                                            JOptionPane.QUESTION_MESSAGE,
+                                            null,
+                                            options, options[2]);
+    }
+    
+    public void actionPerformed(ActionEvent event)
+    {
+        String command = event.getActionCommand();
         if ("quit".equals(command)) {
             System.exit(0);
         }
         else if ("load-collection".equals(command)) {
-            String lastCollectionLoaded = prefs.get("defaultCollection", ".");
-            JFileChooser fileChooser = new JFileChooser(lastCollectionLoaded);
-            fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-            int returnValue = fileChooser.showOpenDialog(window);
-            if (JFileChooser.APPROVE_OPTION == returnValue) {
-                File directory = fileChooser.getSelectedFile();
-                prefs.put("defaultCollection", directory.getAbsolutePath());
+            File directory = requestDirectory("defaultCollection");
+            if (directory != null) {
                 loadCollection(directory);
+                visualize(documents);
+                syncInterface();
             }
             else {
                 System.err.println("Collection loading cancelled");
             }
-            
-            showDocument();
+        }
+        else if ("load-snowball".equals(command)) {
+            if (null == snowballFile) snowballFile = requestFile("snowball", false, "HTML files", "html", "htm", "xhtml");
+            if (snowballFile != null) {
+                try {
+                    snowballView.load(snowballFile);
+                }
+                catch (java.io.IOException e) {
+                    System.err.println(e);
+                }
+            }
+        }
+        else if ("save-snowball".equals(command)) {
+            if (null == snowballFile) {
+                snowballFile = requestFile("snowball", true, "HTML files", "html", "htm", "xhtml");
+            }
+            if (snowballFile != null) {
+                try {
+                    snowballView.save(snowballFile);
+                }
+                catch (java.io.IOException e) {
+                    System.err.println(e);
+                }
+            }
         }
         else if ("ner-engine-simple-regexp".equals(command)) {
             tagger = new SimpleRegexp(documents);
@@ -281,18 +418,30 @@ public class View
             visualize(documents);
         }
         else if ("radar".equals(command)) {
-            Radar.ActionEvent event = (Radar.ActionEvent) e;
+            Radar.ActionEvent radarEvent = (Radar.ActionEvent) event;
             if (columnLabels != null && rowLabels != null) {
-                switch (event.getAction()) {
+                switch (radarEvent.getAction()) {
                 case SCREEN_CLICK:
-                    showDocument(documents.get(event.getColumn()));
-                    searchBox.setText(columnLabels.get(event.getRow()));
+                    selectedRow    = radarEvent.getRow();
+                    selectedColumn = radarEvent.getColumn();
+                    showDocument(documents.get(selectedColumn));
+                    searchBox.setText(columnLabels.get(selectedRow));
+                    documentView.search(searchBox.getText());
+                    updateSearchButtons();
                     break;
                 case SCREEN_MOUSEOVER:
-                    radar.setLabel(rowLabels.get(event.getColumn()) + ", " + columnLabels.get(event.getRow()));
+                    radar.setLabel(rowLabels.get(radarEvent.getColumn()) + ", " + columnLabels.get(radarEvent.getRow()));
+                    break;
+                case SCREEN_LEAVE:
+                    if (selectedRow >= 0 && selectedColumn >= 0) {
+                        radar.setLabel(rowLabels.get(selectedColumn) + ", " + columnLabels.get(selectedRow));
+                    }
+                    else {
+                        radar.setLabel(" ");
+                    }
                     break;
                 default:
-                    System.err.println("unexpected action in Radar.ActionEvent: " + event.getAction());
+                    System.err.println("unexpected action in Radar.ActionEvent: " + radarEvent.getAction());
                 }
             }
         }
@@ -321,6 +470,43 @@ public class View
         }
         else if ("radar-image-zoom-20".equals(command)) {
             radar.setZoom(20);
+        }
+        else if ("open-homepage".equals(command)) {
+            String url = "http://historadar.googlecode.com/";
+            try {
+                Class<?> desktop = Class.forName("java.awt.Desktop");
+                java.net.URI homepage = java.net.URI.create(url);
+                desktop.getDeclaredMethod("browse", new Class[] {java.net.URI.class} )
+                    .invoke(desktop.getDeclaredMethod("getDesktop")
+                            .invoke(null),
+                            new Object[] {homepage}
+                            );
+            }
+            catch (Exception ignore) {
+                java.awt.Toolkit.getDefaultToolkit()
+                .getSystemClipboard()
+                .setContents(new java.awt.datatransfer.StringSelection(url), null);
+                JOptionPane.showInputDialog(window,
+                                            "You can copy the address to your web browser",
+                                            "HistoRadar's website",
+                                            JOptionPane.PLAIN_MESSAGE,
+                                            null, null,
+                                            url);
+            }
+        }
+        else if ("cancel".equals(command)) {
+            if (worker != null) worker.cancel(true);
+        }
+        else if ("search-next".equals(command)) {
+            documentView.moveToNextMatch();
+            updateSearchButtons();
+        }
+        else if ("search-previous".equals(command)) {
+            documentView.moveToPreviousMatch();
+            updateSearchButtons();
+        }
+        else if ("add-to-snowball".equals(command)) {
+            snowballView.addEntry(currentDocument, documentView, searchBox.getText());
         }
         else {
             System.err.println("Error: Unexpected command: '" + command + "'");
@@ -371,6 +557,8 @@ public class View
         
         if (document == null) return;
         
+        currentDocument = document;
+        
         window.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
         
         Document.Metadata.Values values;
@@ -403,9 +591,6 @@ public class View
         if (null == segments) segments = annotateDocument(document);
         
         documentView.setText(document, segments);
-        documentSourceView.setText(document, segments);
-        
-        window.validate();
         
         window.setCursor(Cursor.getDefaultCursor());
     }
@@ -416,9 +601,9 @@ public class View
         documentView.setEditable(false);
         documentView.setContentType("text/html");
         
-        documentSourceView = new DocumentView();
-        documentSourceView.setEditable(false);
-        documentSourceView.setContentType("text/plain");
+        snowballView = new SnowballView();
+        snowballView.setEditable(true);
+        snowballView.setContentType("text/html");
         
         radar = new Radar();
         radar.addActionListener(this);
@@ -426,22 +611,65 @@ public class View
         
         metadataPane = new JPanel();
         documentPane = new JPanel();
+        documentPane.setLayout(new BorderLayout());
         
-        documentPane.setLayout(new BoxLayout(documentPane, BoxLayout.PAGE_AXIS));
+        JPanel documentHeaderPane;
+        documentHeaderPane = new JPanel();
+        documentHeaderPane.setLayout(new BoxLayout(documentHeaderPane, BoxLayout.PAGE_AXIS));
         metadataPane.setLayout(new BoxLayout(metadataPane, BoxLayout.PAGE_AXIS));
-        documentPane.add(metadataPane);
-        documentPane.add(searchBox = new JTextField());
+        
+        JToolBar searchPane;
+        searchPane = new JToolBar();
+        searchPane.setFloatable(false);
+        searchPane.setRollover(false);
+        searchPane.setLayout(new BoxLayout(searchPane, BoxLayout.LINE_AXIS));
+        searchPane.add(searchBox = new JTextField());
+        searchBox.addKeyListener(new java.awt.event.KeyAdapter() {
+                public void keyReleased(java.awt.event.KeyEvent e)
+                {
+                    documentView.search(searchBox.getText());
+                    updateSearchButtons();
+                }
+                
+                public void keyTyped(java.awt.event.KeyEvent e)
+                {
+                    // Ignore
+                }
+                
+                public void keyPressed(java.awt.event.KeyEvent e)
+                {
+                    // Ignore
+                }
+                
+            });
+        button(searchPane, "search-next",     "↓").setToolTipText("Next match");
+        button(searchPane, "search-previous", "↑").setToolTipText("Previous match");
+        button(searchPane, "add-to-snowball", "+").setToolTipText("Add to snowball");
+        
+        documentHeaderPane.add(metadataPane);
+        documentHeaderPane.add(searchPane);
+        documentPane.add(documentHeaderPane, BorderLayout.NORTH);
         
         JTabbedPane tabbedDocumentView = new JTabbedPane();
         tabbedDocumentView.addTab("Document", null, new JScrollPane(documentView), "The annotated document");
-        tabbedDocumentView.addTab("Source", null, new JScrollPane(documentSourceView), "XML source of the annotated document");
-        documentPane.add(tabbedDocumentView);
+        tabbedDocumentView.addTab("Snowball", null, new JScrollPane(snowballView), "Collected notes");
+        documentPane.add(tabbedDocumentView, BorderLayout.CENTER);
         
         view = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, documentPane, radar);
         view.setOneTouchExpandable(true);
         view.setResizeWeight(0.0);
         
         frame.getContentPane().add(view);
+        progressIndicator = new JPanel();
+        progressIndicator.setLayout(new BorderLayout());
+        progressBar = new JProgressBar();
+        progressIndicator.add(progressBar, BorderLayout.CENTER);
+        JButton button = new JButton("Cancel");
+        button.addActionListener(this);
+        button.setActionCommand("cancel");
+        progressIndicator.add(button, BorderLayout.EAST);
+        progressIndicator.setVisible(false);
+        frame.getContentPane().add(progressIndicator, BorderLayout.NORTH);
         
         JMenuBar menuBar = new JMenuBar();
         JMenu menu, submenu;
@@ -449,79 +677,168 @@ public class View
         ButtonGroup group;
         
         menu = new JMenu("File");
-        menu.add(item = new JMenuItem("Load collection"));
-        item.addActionListener(this);
-        item.setActionCommand("load-collection");
+        menuItem(menu, "load-collection", "Load collection");
         menu.addSeparator();
-        menu.add(item = new JMenuItem("Quit"));
-        item.addActionListener(this);
-        item.setActionCommand("quit");
+        menuItem(menu, "load-snowball", "Load snowball");
+        menuItem(menu, "save-snowball", "Save snowball");
+        menu.addSeparator();
+        menuItem(menu, "quit", "Quit");
         menuBar.add(menu);
         
         menu = new JMenu("NER");
         menu.setToolTipText("Named Entity Recognition");
-        group = new ButtonGroup();
-        menu.add(item = new JRadioButtonMenuItem("Simple regexp (built-in)"));
-        item.addActionListener(this);
-        item.setActionCommand("ner-engine-simple-regexp");
-        item.setSelected(true);
-        group.add(item);
-        menu.add(item = new JRadioButtonMenuItem("OpenNLP Maxent"));
-        item.addActionListener(this);
-        item.setActionCommand("ner-engine-opennlp-maxent");
-        group.add(item);
-        menu.add(item = new JRadioButtonMenuItem("Stanford NER"));
-        item.addActionListener(this);
-        item.setActionCommand("ner-engine-stanford");
-        group.add(item);
+        menuGroup(menu,
+                  new String[][] {
+                      {"ner-engine-simple-regexp", "Simple regexp (built-in)"},
+                      {"ner-engine-opennlp-maxent", "OpenNLP Maxent"},
+                      {"ner-engine-stanford", "Stanford NER"}
+                  });
         menuBar.add(menu);
         
         menu = new JMenu("Radar");
-        group = new ButtonGroup();
-        menu.add(item = new JRadioButtonMenuItem("Fuzzy"));
-        item.addActionListener(this);
-        item.setActionCommand("radar-image-fuzzy");
-        item.setSelected(true);
-        group.add(item);
-        menu.add(item = new JRadioButtonMenuItem("Sharp"));
-        item.addActionListener(this);
-        item.setActionCommand("radar-image-sharp");
-        group.add(item);
+        menuGroup(menu,
+                  new String[][] {
+                      {"radar-image-fuzzy", "Fuzzy"},
+                      {"radar-image-sharp", "Sharp"}
+                  });
         menu.add(submenu = new JMenu("Zoom"));
-        group = new ButtonGroup();
-        submenu.add(item = new JRadioButtonMenuItem("1×"));
-        item.addActionListener(this);
-        item.setActionCommand("radar-image-zoom-1");
-        group.add(item);
-        submenu.add(item = new JRadioButtonMenuItem("2×"));
-        item.addActionListener(this);
-        item.setActionCommand("radar-image-zoom-2");
-        group.add(item);
-        submenu.add(item = new JRadioButtonMenuItem("3×"));
-        item.addActionListener(this);
-        item.setActionCommand("radar-image-zoom-3");
-        group.add(item);
-        submenu.add(item = new JRadioButtonMenuItem("4×"));
-        item.addActionListener(this);
-        item.setActionCommand("radar-image-zoom-4");
-        item.setSelected(true);
-        group.add(item);
-        submenu.add(item = new JRadioButtonMenuItem("10×"));
-        item.addActionListener(this);
-        item.setActionCommand("radar-image-zoom-10");
-        group.add(item);
-        submenu.add(item = new JRadioButtonMenuItem("20×"));
-        item.addActionListener(this);
-        item.setActionCommand("radar-image-zoom-20");
-        group.add(item);
-
+        menuGroup(submenu,
+                  new String[][] {
+                      {"radar-image-zoom-1", "1×"},
+                      {"radar-image-zoom-2", "2×"},
+                      {"radar-image-zoom-3", "3×"},
+                      {"radar-image-zoom-4", "4×"},
+                      {"radar-image-zoom-10", "10×"},
+                      {"radar-image-zoom-20", "20×"}
+                  });
+        
         menuBar.add(menu);
         
         menu = new JMenu("About");
-        menu.add(new JMenuItem("Version 2010-03-18 08:48"));
+        menuItem(menu, null, "Version 2010-04-06 23:02");
+        menuItem(menu, "open-homepage", "http://historadar.googlecode.com");
         menuBar.add(menu);
         
         frame.setJMenuBar(menuBar);
+    }
+    
+    private JMenuItem menuItem(JMenu menu, String command, String label)
+    {
+        JMenuItem item;
+        menu.add(item = new JMenuItem(label));
+        if (command != null) {
+            item.addActionListener(this);
+            item.setActionCommand(command);
+            menuItems.put(command, item);
+        }
+        
+        return item;
+    }
+    
+    private void menuGroup(JMenu menu, String[][] items)
+    {
+        ButtonGroup group = new ButtonGroup();
+        JMenuItem item;
+        String command, label;
+        for (int i = 0; i < items.length; ++i) {
+            command = items[i][0];
+            label   = items[i][1];
+            menu.add(item = new JRadioButtonMenuItem(label));
+            if (command != null) {
+                item.addActionListener(this);
+                item.setActionCommand(command);
+                menuItems.put(command, item);
+            }
+            group.add(item);
+        }
+    }
+    
+    private JButton button(JComponent component, String command, String label)
+    {
+        JButton button;
+        component.add(button = new JButton(label));
+        if (command != null) {
+            button.addActionListener(this);
+            button.setActionCommand(command);
+            buttons.put(command, button);
+        }
+        
+        return button;
+    }
+    
+    private void updateSearchButtons()
+    {
+        JButton button;
+        button = buttons.get("search-next");
+        if (button != null) {
+            button.setEnabled(documentView.hasNextMatch());
+        }
+        button = buttons.get("search-previous");
+        if (button != null) {
+            button.setEnabled(documentView.hasPreviousMatch());
+        }
+    }
+    
+    private void syncInterface()
+    {
+        String taggerClass;
+        if (tagger != null) taggerClass = tagger.getClass().getName();
+        else                taggerClass = "";
+        
+        String command;
+        if ("org.matracas.historadar.nlp.ner.SimpleRegexp".equals(taggerClass)) {
+            command = "ner-engine-simple-regexp";
+        }
+        else if ("org.matracas.historadar.nlp.ner.OpenNlpNER".equals(taggerClass)) {
+            command = "ner-engine-opennlp-maxent";
+        }
+        else if ("org.matracas.historadar.nlp.ner.StanfordNER".equals(taggerClass)) {
+            command = "ner-engine-stanford";
+        }
+        else {
+            System.err.println("Error: unknown tagger class: " + taggerClass);
+            command = "";
+        }
+        
+        if (menuItems.containsKey(command)) {
+            menuItems.get(command).setSelected(true);
+        }
+        
+        switch (radar.getZoom()) {
+        case 1:
+            command = "radar-image-zoom-1";
+            break;
+        case 2:
+            command = "radar-image-zoom-2";
+            break;
+        case 3:
+            command = "radar-image-zoom-3";
+            break;
+        case 4:
+            command = "radar-image-zoom-4";
+            break;
+        case 10:
+            command = "radar-image-zoom-10";
+            break;
+        case 20:
+            command = "radar-image-zoom-20";
+            break;
+        default:
+            command = "";
+        }
+        
+        if (menuItems.containsKey(command)) {
+            menuItems.get(command).setSelected(true);
+        }
+        
+        if (radar.getFuzzy()) command = "radar-image-fuzzy";
+        else                  command = "radar-image-sharp";
+        
+        if (menuItems.containsKey(command)) {
+            menuItems.get(command).setSelected(true);
+        }
+        
+        updateSearchButtons();
     }
     
     public static void main(final String[] args)
