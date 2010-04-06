@@ -33,3 +33,17 @@ Stanford Named Entity Recognizer:
   - stanford-ner.jar
   - classifiers/ner-eng-ie.crf-3-all2008.ser.gz
 --------------------------------------------------------------------
+SwingWorker backport for Java 1.5:
+  Website: https://swingworker.dev.java.net/
+  License: GNU Library or Lesser General Public License (LGPL)
+  Files:
+  - swingworker-historadar-drop-in.jar
+  This is modified to work as a direct drop-in replacement for the
+standard SwingWorker from Java 1.6 by changing the package name
+from "org.jdesktop.swingworker" to "javax.swing".
+  The modified sources can be downloaded from HistoRadar's website:
+
+  HistoRadar's build.xml file checks whether SwingWorker is already
+available in the machine compiling the application, and only
+includes this replacement if necessary.
+--------------------------------------------------------------------
