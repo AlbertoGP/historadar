@@ -723,7 +723,7 @@ public class Document
         
         public String serialize(org.w3c.dom.Node node)
         {
-            return super.serialize(node).replace("\n", "<br/>");
+            return super.serialize(node).replace("\n", "<br />\n");
         }
         
     }
