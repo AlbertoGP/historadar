@@ -33,6 +33,12 @@ import java.util.SortedSet;
 import java.util.prefs.Preferences;
 import java.util.regex.Pattern;
 
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+
 import org.matracas.historadar.Document;
 
 /**
@@ -294,6 +300,57 @@ public class DocumentView extends JTextPane
         }
         
         return color;
+    }
+    
+    public void load(File file) throws java.io.IOException
+    {
+        java.io.IOException exception = null;
+        
+        BufferedReader reader = null;
+        try { 
+            String plainText = "";
+            reader = new BufferedReader(new FileReader(file));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                plainText += new String(line.getBytes(), "UTF-8") + "\n";
+            }
+            setText(plainText);
+        }
+        catch (java.io.IOException e) {
+            exception = e;
+        }
+        
+        try {
+            if (reader != null) reader.close();
+        }
+        catch (java.io.IOException e) {
+            if (null == exception) exception = e;
+        }
+        
+        if (exception != null) throw exception;
+    }
+    
+    public void save(File file) throws java.io.IOException
+    {
+        java.io.IOException exception = null;
+        
+        BufferedWriter writer = null;
+        try {
+            writer = new BufferedWriter(new FileWriter(file));
+            writer.write(getText());
+        }
+        catch (java.io.IOException e) {
+            exception = e;
+        }
+        
+        try {
+            if (writer != null) writer.close();
+        }
+        catch (java.io.IOException e) {
+            if (null == exception) exception = e;
+        }
+        
+        if (exception != null) throw exception;
     }
     
 }
