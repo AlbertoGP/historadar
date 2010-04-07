@@ -32,7 +32,6 @@
   <target name="compile" depends="init, classpath-compat"
           description="compile the source " >
     <!-- Compile the java code from ${src} into ${build} -->
-    <echo message="hasSwingWorker=${hasSwingWorker}"/>
     <javac debug="on" srcdir="${src}" destdir="${build}" encoding="UTF-8">
       <classpath>
         <pathelement path="${classpath}"/>
