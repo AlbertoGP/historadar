@@ -74,62 +74,57 @@ public class SnowballView extends DocumentView
         while (contextBegin > 0) {
             minimumReached = position - contextBegin > contextRadius;
             c = documentText.charAt(contextBegin);
-            if ('\n' == c || ':' == c ||
-                (!Character.isLetter(c) && minimumReached)) break;
+            if (!Character.isLetter(c) && minimumReached) break;
             --contextBegin;
         }
         while (contextEnd < documentText.length()) {
             minimumReached = contextEnd - position > contextRadius;
             c = documentText.charAt(contextEnd);
-            if ('\n' == c || ':' == c ||
-                (!Character.isLetter(c) && minimumReached)) break;
+            if (!Character.isLetter(c) && minimumReached) break;
             ++contextEnd;
         }
         String context = documentText.substring(contextBegin + 1, contextEnd);
-        java.util.regex.Matcher matcher = searchPattern(searchQuery).matcher(context);
-        context = matcher.replaceAll("<b>$0</b>");
+        if (searchQuery != null && searchQuery.length() > 0) {
+            java.util.regex.Matcher matcher = searchPattern(searchQuery).matcher(context);
+            context = matcher.replaceAll("<b>$0</b>");
+        }
         
-        try {
-            HTMLDocument snowball = (HTMLDocument) getDocument();
-            javax.swing.text.html.HTMLEditorKit editorKit = (javax.swing.text.html.HTMLEditorKit) getEditorKit();
-            String content = "<div style='font-family:sans-serif'><h2>Document " + document.getIdentifier() + "</h2>";
-            content += "<table border='1'>";
-            Document.Metadata.Values values;
-            values = document.getMetadata().get(Document.Metadata.date);
-            if (values != null) {
-                java.util.Iterator<String> valueIterator = values.iterator();
-                while (valueIterator.hasNext()) {
-                    content += "<tr><td>Date</td><td colspan='2'>" + valueIterator.next() + "</td></tr>";
-                }
+        String content = "<div style='font-family:sans-serif'>";
+        if (document.getURI() != null) {
+            content += "<h2>Document <a href='" + document.getURI() + "'>" + document.getIdentifier() + "</a></h2>";
+        }
+        else {
+            content += "<h2>Document " + document.getIdentifier() + "</h2>";
+        }
+        content += "<table border='1'>";
+        Document.Metadata.Values values;
+        values = document.getMetadata().get(Document.Metadata.date);
+        if (values != null) {
+            java.util.Iterator<String> valueIterator = values.iterator();
+            while (valueIterator.hasNext()) {
+                content += "<tr><td>Date</td><td colspan='2'>" + valueIterator.next() + "</td></tr>";
             }
+        }
             
-            content += "<tr><td>Search query</td><td>" + searchQuery + "</td>";
-            if (documentView.getMatchCount() > 0) {
-                content += "<td>" + (documentView.getCurrentMatch() + 1) + "</td></tr>";
-            }
-            else {
-                content += "<td>-</td></tr>";
-            }
-            content += "<tr><td>Position</td><td>" + position + "</td>";
-            content += "<td>" + (position * 100 / documentText.length()) + "%</td></tr>";
-            content += "<tr><td>Page</td><td colspan='2'>" + pageNumber + "</td></tr>";
-            java.util.Date date = new java.util.Date();
-            java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm");
-            content += "<tr><td>Date bookmarked</td><td colspan='2'>" + dateFormat.format(date) + "</td></tr>";
-            content += "<tr><td colspan='3' style='font-family:serif'>" + context + "</td></tr>";
-            content += "<tr><td>Notes</td><td colspan='2'>&nbsp;</td></tr>";
-            content += "</table></div> <br />";
-            editorKit.insertHTML(snowball, snowball.getLength(),
-                                 content,
-                                 0, 0, null);
-            setCaretPosition(snowball.getLength());
+        content += "<tr><td>Search query</td><td>" + searchQuery + "</td>";
+        if (documentView.getMatchCount() > 0) {
+            content += "<td>" + (documentView.getCurrentMatch() + 1) + "</td></tr>";
         }
-        catch (javax.swing.text.BadLocationException e) {
-            System.err.println("Error in SnowballView: " + e);
+        else {
+            content += "<td>-</td></tr>";
         }
-        catch (java.io.IOException e) {
-            System.err.println("Error in SnowballView: " + e);
-        }
+        content += "<tr><td>Position</td><td>" + position + "</td>";
+        content += "<td>" + (position * 100 / documentText.length()) + "%</td></tr>";
+        content += "<tr><td>Page</td><td colspan='2'>" + pageNumber + "</td></tr>";
+        java.util.Date date = new java.util.Date();
+        java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm");
+        content += "<tr><td>Date bookmarked</td><td colspan='2'>" + dateFormat.format(date) + "</td></tr>";
+        content += "<tr><td colspan='3' style='font-family:serif'>" + context + "</td></tr>";
+        content += "<tr><td>Notes</td><td colspan='2'>&nbsp;</td></tr>";
+        content += "</table></div> <br />";
+        HTMLDocument snowball = (HTMLDocument) getDocument();
+        insertHTML(snowball.getLength(), content);
+        setCaretPosition(snowball.getLength());
         
         return this;
     }
