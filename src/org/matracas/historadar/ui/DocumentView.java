@@ -50,6 +50,7 @@ public class DocumentView extends JTextPane
     protected Pattern regexpEscape;
     protected Highlighter.HighlightPainter highlightPainter;
     protected java.awt.Stroke stroke;
+    private boolean modified;
     
     public DocumentView()
     {
@@ -60,6 +61,7 @@ public class DocumentView extends JTextPane
         regexpEscape = Pattern.compile("([.*?{}$()\\[\\]^\\\\+-])");
         highlightPainter = new MatchHighlightPainter();
         stroke = new java.awt.BasicStroke(3.2f);
+        modified = false;
     }
     
     protected class MatchHighlightPainter implements Highlighter.HighlightPainter
@@ -141,6 +143,38 @@ public class DocumentView extends JTextPane
         else {
             setText(document.getXMLString(segments));
         }
+    }
+    
+    public void setText(String text)
+    {
+        setModified(true);
+        super.setText(text);
+    }
+    
+    public void insertHTML(int position, String content)
+    {
+        try {
+            HTMLDocument htmlDocument = (HTMLDocument) getDocument();
+            javax.swing.text.html.HTMLEditorKit editorKit = (javax.swing.text.html.HTMLEditorKit) getEditorKit();
+            editorKit.insertHTML(htmlDocument, position, content, 0, 0, null);
+            setModified(true);
+        }
+        catch (javax.swing.text.BadLocationException e) {
+            System.err.println("Error in DocumentView.insertHTML(): " + e);
+        }
+        catch (java.io.IOException e) {
+            System.err.println("Error in DocumentView.insertHTML(): " + e);
+        }
+    }
+    
+    public void setModified(boolean modified)
+    {
+        this.modified = modified;
+    }
+    
+    public boolean getModified()
+    {
+        return modified;
     }
     
     public int getMatchCount()
