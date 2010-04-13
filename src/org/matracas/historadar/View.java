@@ -39,6 +39,7 @@ import org.matracas.historadar.Document;
 import org.matracas.historadar.ui.DocumentView;
 import org.matracas.historadar.ui.SnowballView;
 import org.matracas.historadar.ui.Radar;
+import org.matracas.historadar.ui.FileNameRegexpFilter;
 import org.matracas.historadar.nlp.OCR;
 import org.matracas.historadar.nlp.Metadata;
 import org.matracas.historadar.nlp.NER;
@@ -63,6 +64,7 @@ public class View
     private JTextField searchBox;
     private DocumentView documentView;
     private SnowballView snowballView;
+    private JTabbedPane tabbedDocumentView;
     private File snowballFile;
     private Radar radar;
     private int selectedRow, selectedColumn;
@@ -290,7 +292,7 @@ public class View
     
     protected File requestFile(String key, boolean forWriting, String filterDescription, String... extensions)
     {
-        return requestFile(key, forWriting, JFileChooser.FILES_AND_DIRECTORIES, filterDescription, extensions);
+        return requestFile(key, forWriting, JFileChooser.FILES_ONLY, filterDescription, extensions);
     }
     
     protected File requestDirectory(String key)
@@ -306,17 +308,25 @@ public class View
         File file = null;
         boolean retry = true;
         while (retry) {
-            JFileChooser fileChooser = new JFileChooser(lastCollectionLoaded);
-            if (lastCollectionLoaded != "." && JFileChooser.DIRECTORIES_ONLY == mode) {
-                fileChooser.changeToParentDirectory();
-            }
+            //JFileChooser fileChooser = new JFileChooser(lastCollectionLoaded);
+            //if (lastCollectionLoaded != "." && JFileChooser.DIRECTORIES_ONLY == mode) {
+            //    fileChooser.changeToParentDirectory();
+            //}
+            file = new File(lastCollectionLoaded);
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setSelectedFile(file);
             if (mode != 0) fileChooser.setFileSelectionMode(mode);
             if (filterDescription != null) {
-                fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(filterDescription, extensions));
+                fileChooser.setFileFilter(new FileNameRegexpFilter(FileNameRegexpFilter.FILENAME_EXTENSION, filterDescription, extensions));
             }
-            int returnValue = fileChooser.showOpenDialog(window);
+            int returnValue;
+            if (forWriting) returnValue = fileChooser.showSaveDialog(window);
+            else            returnValue = fileChooser.showOpenDialog(window);
             if (JFileChooser.APPROVE_OPTION == returnValue) {
-                file = fileChooser.getSelectedFile();
+                String fileName = fileChooser.getSelectedFile().getAbsolutePath();
+                if (mode == JFileChooser.DIRECTORIES_ONLY) {
+                    fileName += "/.";// :-)
+                }
                 prefs.put(key, file.getAbsolutePath());
             }
             else {
@@ -372,7 +382,6 @@ public class View
             if (directory != null) {
                 loadCollection(directory);
                 visualize(documents);
-                syncInterface();
             }
             else {
                 System.err.println("Collection loading cancelled");
@@ -383,6 +392,7 @@ public class View
             if (snowballFile != null) {
                 try {
                     snowballView.load(snowballFile);
+                    snowballView.setModified(false);
                 }
                 catch (java.io.IOException e) {
                     System.err.println(e);
@@ -396,6 +406,21 @@ public class View
             if (snowballFile != null) {
                 try {
                     snowballView.save(snowballFile);
+                    snowballView.setModified(false);
+                }
+                catch (java.io.IOException e) {
+                    System.err.println(e);
+                }
+            }
+        }
+        else if ("save-snowball-as".equals(command)) {
+            File newSnowballFile;
+            newSnowballFile = requestFile("snowball", true, "HTML files", "html", "htm", "xhtml");
+            if (newSnowballFile != null) {
+                try {
+                    snowballView.save(newSnowballFile);
+                    snowballFile = newSnowballFile;
+                    snowballView.setModified(false);
                 }
                 catch (java.io.IOException e) {
                     System.err.println(e);
@@ -499,19 +524,20 @@ public class View
         }
         else if ("search-next".equals(command)) {
             documentView.moveToNextMatch();
-            updateSearchButtons();
         }
         else if ("search-previous".equals(command)) {
             documentView.moveToPreviousMatch();
-            updateSearchButtons();
         }
         else if ("add-to-snowball".equals(command)) {
             snowballView.addEntry(currentDocument, documentView, searchBox.getText());
+            documentView.moveToNextMatch();
         }
         else {
             System.err.println("Error: Unexpected command: '" + command + "'");
             System.exit(1);
         }
+        
+        syncInterface();
     }
     
     protected Document.SegmentList annotateDocument(Document document)
@@ -644,13 +670,14 @@ public class View
             });
         button(searchPane, "search-next",     "↓").setToolTipText("Next match");
         button(searchPane, "search-previous", "↑").setToolTipText("Previous match");
-        button(searchPane, "add-to-snowball", "+").setToolTipText("Add to snowball");
+        button(searchPane, "add-to-snowball", " + ").setToolTipText("Add to snowball");
+        button(searchPane, "save-snowball", "Save").setToolTipText("Save snowball");
         
         documentHeaderPane.add(metadataPane);
         documentHeaderPane.add(searchPane);
         documentPane.add(documentHeaderPane, BorderLayout.NORTH);
         
-        JTabbedPane tabbedDocumentView = new JTabbedPane();
+        tabbedDocumentView = new JTabbedPane();
         tabbedDocumentView.addTab("Document", null, new JScrollPane(documentView), "The annotated document");
         tabbedDocumentView.addTab("Snowball", null, new JScrollPane(snowballView), "Collected notes");
         documentPane.add(tabbedDocumentView, BorderLayout.CENTER);
@@ -681,6 +708,7 @@ public class View
         menu.addSeparator();
         menuItem(menu, "load-snowball", "Load snowball");
         menuItem(menu, "save-snowball", "Save snowball");
+        menuItem(menu, "save-snowball-as", "Save snowball as...");
         menu.addSeparator();
         menuItem(menu, "quit", "Quit");
         menuBar.add(menu);
@@ -715,7 +743,7 @@ public class View
         menuBar.add(menu);
         
         menu = new JMenu("About");
-        menuItem(menu, null, "Version 2010-04-06 23:02");
+        menuItem(menu, null, "Version 2010-04-13 13:32");
         menuItem(menu, "open-homepage", "http://historadar.googlecode.com");
         menuBar.add(menu);
         
@@ -836,6 +864,18 @@ public class View
         
         if (menuItems.containsKey(command)) {
             menuItems.get(command).setSelected(true);
+        }
+        
+        command = "save-snowball";
+        if (menuItems.containsKey(command)) {
+            menuItems.get(command).setEnabled(snowballView.getModified());
+        }
+        if (buttons.containsKey(command)) {
+            buttons.get(command).setEnabled(snowballView.getModified());
+        }
+        command = "save-snowball-as";
+        if (menuItems.containsKey(command)) {
+            menuItems.get(command).setEnabled(snowballView.getModified());
         }
         
         updateSearchButtons();
