@@ -743,7 +743,7 @@ public class View
         menuBar.add(menu);
         
         menu = new JMenu("About");
-        menuItem(menu, null, "Version 2010-04-13 13:32");
+        menuItem(menu, null, "Version 2010-04-13 17:26");
         menuItem(menu, "open-homepage", "http://historadar.googlecode.com");
         menuBar.add(menu);
         
@@ -872,10 +872,6 @@ public class View
         }
         if (buttons.containsKey(command)) {
             buttons.get(command).setEnabled(snowballView.getModified());
-        }
-        command = "save-snowball-as";
-        if (menuItems.containsKey(command)) {
-            menuItems.get(command).setEnabled(snowballView.getModified());
         }
         
         updateSearchButtons();
