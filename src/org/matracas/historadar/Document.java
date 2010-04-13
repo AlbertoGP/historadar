@@ -47,6 +47,7 @@ public class Document
     protected String identifier;
     protected Metadata metadata;
     protected File file;
+    private java.net.URI uri;
     
     protected Document()
     {
@@ -64,6 +65,8 @@ public class Document
         metadata = new Metadata();
         this.identifier = identifier;
         plainText = null;
+        this.file = null;
+        this.uri  = null;
     }
     
     /**
@@ -78,8 +81,15 @@ public class Document
         throws java.io.FileNotFoundException
     {
         this(identifier);
-        if (null == this.identifier) this.identifier = file.getName();
+        if (null == this.identifier) {
+            identifier = file.getName();
+            if (identifier.endsWith(".txt")) { 
+                identifier = identifier.substring(0, identifier.length() - 4);
+            }
+            this.identifier = identifier;
+        }
         this.file = file;
+        this.uri = file.toURI();
     }
     
     /**
@@ -118,6 +128,32 @@ public class Document
     public String getIdentifier()
     {
         return identifier;
+    }
+    
+    /**
+     * Get the document URI if available.
+     *
+     * The URI is the one of the file it was loaded from if using the
+     * constructor {@link #Document(String, File)},
+     * the one set by calling {@link #setURI(String)}
+     * (which overrides the file one)
+     * or <code>null</code>.
+     *
+     * @return document's URI, or null if not available
+     */
+    public java.net.URI getURI()
+    {
+        return uri;
+    }
+    
+    /**
+     * Get the document URI if available.
+     *
+     * @param uri new URI for the document
+     */
+    public void setURI(java.net.URI uri)
+    {
+        this.uri = uri;
     }
     
     /**
