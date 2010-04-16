@@ -88,7 +88,6 @@ public class View
     {
         prefs = Preferences.userNodeForPackage(View.class);
         
-        JFrame.setDefaultLookAndFeelDecorated(false);
         window = new JFrame("HistoRadar View");
         window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         window.setSize(800,600);
@@ -305,35 +304,64 @@ public class View
         if (null == key) key = "defaultCollection";
         String lastCollectionLoaded = prefs.get(key, ".");
         
+        String lcOSName = System.getProperty("os.name").toLowerCase();
+        boolean MAC_OS_X = lcOSName.startsWith("mac os x");
+        
+        boolean directories = (JFileChooser.DIRECTORIES_ONLY == mode || JFileChooser.FILES_AND_DIRECTORIES == mode);
+        
         File file = null;
         boolean retry = true;
         while (retry) {
-            //JFileChooser fileChooser = new JFileChooser(lastCollectionLoaded);
-            //if (lastCollectionLoaded != "." && JFileChooser.DIRECTORIES_ONLY == mode) {
-            //    fileChooser.changeToParentDirectory();
-            //}
             file = new File(lastCollectionLoaded);
-            JFileChooser fileChooser = new JFileChooser();
-            fileChooser.setSelectedFile(file);
-            if (mode != 0) fileChooser.setFileSelectionMode(mode);
-            if (filterDescription != null) {
-                fileChooser.setFileFilter(new FileNameRegexpFilter(FileNameRegexpFilter.FILENAME_EXTENSION, filterDescription, extensions));
-            }
-            int returnValue;
-            if (forWriting) returnValue = fileChooser.showSaveDialog(window);
-            else            returnValue = fileChooser.showOpenDialog(window);
-            if (JFileChooser.APPROVE_OPTION == returnValue) {
-                String fileName = fileChooser.getSelectedFile().getAbsolutePath();
-                if (mode == JFileChooser.DIRECTORIES_ONLY) {
-                    fileName += "/.";// :-)
+            
+            if (MAC_OS_X) {
+                java.awt.FileDialog fileChooser = new java.awt.FileDialog(window);
+                if (directories) {
+                    System.setProperty("apple.awt.fileDialogForDirectories", "true");
                 }
-                prefs.put(key, file.getAbsolutePath());
+                else {
+                    System.setProperty("apple.awt.fileDialogForDirectories", "false");
+                }
+                //if (filterDescription != null) {
+                //    fileChooser.setFilenameFilter(new FileNameRegexpFilter(FileNameRegexpFilter.FILENAME_EXTENSION, filterDescription, extensions));
+                //}
+                if (forWriting) fileChooser.setMode(java.awt.FileDialog.SAVE);
+                else            fileChooser.setMode(java.awt.FileDialog.LOAD);
+                String fileName = file.getAbsolutePath();
+                fileChooser.setDirectory(file.getParentFile().getAbsolutePath());
+                fileChooser.setFile(file.getName());
+                fileChooser.setVisible(true);
+                if (fileChooser.getFile() != null) {
+                    file = new File(fileChooser.getDirectory(), fileChooser.getFile());
+                }
+                else {
+                    file = null;
+                }
             }
             else {
-                file = null;
+                JFileChooser fileChooser = new JFileChooser();
+                if (mode != 0) {
+                    fileChooser.setFileSelectionMode(mode);
+                }
+                if (filterDescription != null) {
+                    fileChooser.setFileFilter(new FileNameRegexpFilter(FileNameRegexpFilter.FILENAME_EXTENSION, filterDescription, extensions));
+                }
+                fileChooser.setSelectedFile(file);
+                int returnValue;
+                if (forWriting) returnValue = fileChooser.showSaveDialog(window);
+                else            returnValue = fileChooser.showOpenDialog(window);
+                if (JFileChooser.APPROVE_OPTION == returnValue) {
+                    file = fileChooser.getSelectedFile();
+                }
+                else {
+                    file = null;
+                }
             }
             
+            if (file != null) prefs.put(key, file.getAbsolutePath());
+            
             if (forWriting && file != null && file.exists()) {
+                System.err.println("file.exists() = " + file.exists());
                 int result = ask("The file exists. Overwrite?",
                                  "Overwrite",
                                  "Use another name",
@@ -743,7 +771,7 @@ public class View
         menuBar.add(menu);
         
         menu = new JMenu("About");
-        menuItem(menu, null, "Version 2010-04-13 17:26");
+        menuItem(menu, null, "Version 2010-04-16 15:29");
         menuItem(menu, "open-homepage", "http://historadar.googlecode.com");
         menuBar.add(menu);
         
@@ -811,7 +839,7 @@ public class View
     {
         String taggerClass;
         if (tagger != null) taggerClass = tagger.getClass().getName();
-        else                taggerClass = "";
+        else                taggerClass = null;
         
         String command;
         if ("org.matracas.historadar.nlp.ner.SimpleRegexp".equals(taggerClass)) {
@@ -824,7 +852,7 @@ public class View
             command = "ner-engine-stanford";
         }
         else {
-            System.err.println("Error: unknown tagger class: " + taggerClass);
+            if (taggerClass != null) System.err.println("Error: unknown tagger class: " + taggerClass);
             command = "";
         }
         
@@ -879,6 +907,14 @@ public class View
     
     public static void main(final String[] args)
     {
+        //JFrame.setDefaultLookAndFeelDecorated(false);
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+        
         javax.swing.SwingUtilities.invokeLater(new Runnable() {
                 public void run() 
                 {
