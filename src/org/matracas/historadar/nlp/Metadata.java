@@ -2,6 +2,8 @@
 //
 //   Copyright 2010 Alberto González Palomo
 //   Author: Alberto González Palomo - http://matracas.org/
+//   Copyright 2010 Johannes Braunias
+//   Author: Johannes Braunias - https://historadar.googlecode.com/people/list
 //
 //   This file is part of HistoRadar, the History Radar.
 //
@@ -19,7 +21,6 @@
 //   along with HistoRadar; if not, see <http://www.gnu.org/licenses/>.
 //
 /////////////////////////////////////////////////////////////////////////////
-
 package org.matracas.historadar.nlp;
 
 import java.sql.Time;
