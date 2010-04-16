@@ -65,10 +65,15 @@ public class Radar extends JPanel
         
         JScrollPane screenScrollPane;
         screenScrollPane = new JScrollPane(screen, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        add(screenScrollPane, BorderLayout.CENTER);
         screenScrollPane.getVerticalScrollBar()  .setUnitIncrement(4);
         screenScrollPane.getHorizontalScrollBar().setUnitIncrement(4);
-        screenScrollPane.setColumnHeaderView(timeScale);
+        // This way the time scale is drawn incorrectly, probably because
+        // we would have to keep track of scrolling ourselves:
+        //screenScrollPane.setColumnHeaderView(timeScale);
+        // ... so just do it the simple way:
+        screen.add(timeScale, BorderLayout.NORTH);
+        
+        add(screenScrollPane, BorderLayout.CENTER);
         
         entityLabel = new JLabel(" ");
         add(entityLabel, BorderLayout.NORTH);
