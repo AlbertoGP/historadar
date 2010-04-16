@@ -65,6 +65,7 @@
       <fileset dir="${build}" includes="**/*.*"/>
       <fileset dir=".">
         <include name="lib/**/*.bin.gz"/>
+        <include name="lib/**/*.ser.gz"/>
       </fileset>
       <zipfileset src="${dist}/lib/external-libs.jar">
         <exclude name="*"/>
