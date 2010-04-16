@@ -35,6 +35,7 @@ import edu.stanford.nlp.ling.CoreAnnotations.AnswerAnnotation;
 import edu.stanford.nlp.util.StringUtils;
 import java.util.*;
 import edu.stanford.nlp.util.*;
+import java.util.zip.GZIPInputStream;
 
 /**
  * Named entities extracted from a document.
@@ -47,8 +48,16 @@ public class StanfordNER extends NER
     public StanfordNER(Document.Collection collection)
     {
         /*load the NE classifier from its file*/
-        String serializedClassifier = "lib/StanfordNER/classifiers/ner-eng-ie.crf-3-all2008.ser.gz";
-        classifier = CRFClassifier.getClassifierNoExceptions(serializedClassifier);
+        String serializedClassifier = "/lib/StanfordNER/classifiers/ner-eng-ie.crf-3-all2008.ser.gz";
+        try {
+            classifier = CRFClassifier.getClassifier(new GZIPInputStream(getClass().getResourceAsStream(serializedClassifier)));
+        }
+        catch (java.io.IOException e) {
+            System.err.println("Error: StanfordNER: " + e);
+        }
+        catch (java.lang.ClassNotFoundException e) {
+            System.err.println("Error: StanfordNER: " + e);
+        }
     }
     
     /**
