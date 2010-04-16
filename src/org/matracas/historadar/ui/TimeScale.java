@@ -22,7 +22,7 @@
 
 package org.matracas.historadar.ui;
 
-import javax.swing.JPanel;
+import javax.swing.JLabel;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Color;
@@ -34,7 +34,7 @@ import java.awt.event.MouseEvent;
 import java.util.Date;
 import java.util.Vector;
 
-public class TimeScale extends JPanel
+public class TimeScale extends JLabel
     implements MouseInputListener
 {
     protected Vector<ActionListener> actionListeners;
@@ -87,13 +87,15 @@ public class TimeScale extends JPanel
     public void paintComponent(Graphics g)
     {
         Graphics2D g2 = (Graphics2D) g;
-        g2.clearRect(0, 0, getWidth(), getHeight());
+        g2.clearRect(getX(), getY(), getWidth(), getHeight());
         g2.setFont(getFont());
         g2.setColor(Color.BLACK);
         g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
                             java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
         int fontOffset = fontSize;
-        int x, y, lastLabelX;
+        int x0, y0, x, y, lastLabelX;
+        x0 = 0;//getX();
+        y0 = 0;//getY();
         x = 0;
         y = fontSize + fontSize/2;
         int step = dateTextWidth + fontSize;
@@ -103,13 +105,15 @@ public class TimeScale extends JPanel
             x = index * getWidth() / dates.size();
             g2.setColor(Color.GRAY);
             if (x - lastLabelX > step) {
-                g2.drawLine(x, 0, x, getHeight());
+                g2.drawLine(x0 + x, y0,
+                            x0 + x, y0 + getHeight());
                 g2.setColor(Color.BLACK);
-                g2.drawString(dateFormat.format(date), x + 2, y);
+                g2.drawString(dateFormat.format(date), x0 + x + 2, y0 + y);
                 lastLabelX = x;
             }
             else {
-                g2.drawLine(x, getHeight()-fontSize/4, x, getHeight());
+                g2.drawLine(x0 + x, y0 + getHeight()-fontSize/4,
+                            x0 + x, y0 + getHeight());
             }
             ++index;
         }
